@@ -1,0 +1,210 @@
+/* ============================ VAULT ============================ */
+.tower { display: flex; flex-direction: column-reverse; gap: 4px; }
+.tower-floor {
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.02); font-size: var(--fs-sm);
+  transition: all var(--t-med) var(--ease);
+}
+.tower-floor .tf-n { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-4); width: 16px; }
+.tower-floor .tf-name { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.tower-floor .tf-mark { margin-left: auto; font-size: 13px; }
+.tower-floor.cleared { border-color: color-mix(in oklab, var(--good) 42%, transparent); background: color-mix(in oklab, var(--good) 10%, transparent); }
+.tower-floor.cleared .tf-name { color: color-mix(in oklab, var(--good) 85%, white); }
+.tower-floor.current {
+  border-color: var(--accent); background: color-mix(in oklab, var(--accent) 16%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent), 0 8px 26px -14px var(--accent);
+  transform: translateX(3px);
+}
+.tower-floor.current .tf-name { color: var(--ink); }
+.def-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.def-chip {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 999px; border: 1px solid color-mix(in oklab, var(--bad) 40%, transparent);
+  color: color-mix(in oklab, var(--bad) 85%, white); background: color-mix(in oklab, var(--bad) 10%, transparent);
+}
+.def-chip.none { border-color: var(--line); color: var(--ink-4); background: none; }
+.leak-banner {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--r-sm);
+  border: 1px solid color-mix(in oklab, var(--gold) 55%, transparent);
+  background: color-mix(in oklab, var(--gold) 14%, transparent);
+  font-size: var(--fs-sm); animation: pulse-gold 1.6s var(--ease) infinite;
+}
+@keyframes pulse-gold { 50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--gold) 8%, transparent); } }
+
+/* ============================ HOTWIRE ============================ */
+.wire-card {
+  position: relative; overflow: hidden; text-align: center;
+  padding: 22px 16px; border-radius: var(--r-lg);
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  background: radial-gradient(120% 100% at 50% 0%, color-mix(in oklab, var(--accent) 24%, transparent), transparent 62%), var(--panel);
+}
+.wire-card .wk { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-4); }
+.wire-target {
+  font-size: clamp(1.5rem, 6vw, 2.1rem); font-weight: 700; letter-spacing: -0.02em;
+  margin: 6px 0 12px; animation: card-flip var(--t-slow) var(--ease-out-back);
+}
+@keyframes card-flip { from { opacity: 0; transform: rotateX(50deg) translateY(-8px); } }
+.taboo-list { display: flex; flex-direction: column; gap: 5px; }
+.taboo {
+  display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--bad) 32%, transparent);
+  background: color-mix(in oklab, var(--bad) 8%, transparent);
+  font-size: var(--fs-sm); color: color-mix(in oklab, var(--bad) 85%, white);
+}
+.taboo::before { content: "✕"; font-size: 10px; opacity: 0.8; }
+.timer-ring { display: grid; place-items: center; position: relative; }
+.timer-ring svg { transform: rotate(-90deg); }
+.timer-ring circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+.timer-ring .track { stroke: rgba(255,255,255,0.09); }
+.timer-ring .bar { stroke: var(--accent); transition: stroke-dashoffset 900ms linear, stroke var(--t-med); }
+.timer-ring.low .bar { stroke: var(--bad); }
+.timer-num {
+  position: absolute; font-family: var(--font-mono); font-size: var(--fs-xl); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.timer-ring.low .timer-num { color: var(--bad); animation: tick-pulse 1s steps(2) infinite; }
+@keyframes tick-pulse { 50% { opacity: 0.45; } }
+.combo-flame {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 700;
+}
+.combo-flame.hot { color: var(--gold); text-shadow: 0 0 16px color-mix(in oklab, var(--gold) 70%, transparent); }
+.solved-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.solved-chip {
+  font-size: var(--fs-xs); padding: 3px 8px; border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--good) 40%, transparent);
+  background: color-mix(in oklab, var(--good) 10%, transparent);
+}
+.solved-chip.burn { border-color: color-mix(in oklab, var(--bad) 40%, transparent); background: color-mix(in oklab, var(--bad) 10%, transparent); text-decoration: line-through; opacity: 0.75; }
+
+/* ============================ ORACLE ============================ */
+.q-dots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.q-dot { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.09); transition: background var(--t-med), transform var(--t-med) var(--ease-out-back); }
+.q-dot.yes { background: var(--good); } .q-dot.no { background: var(--bad); }
+.q-dot.sometimes { background: var(--warn); } .q-dot.irrelevant { background: var(--ink-4); }
+.q-dot.unclear { background: var(--ink-3); }
+.qa-list { display: flex; flex-direction: column; gap: 5px; max-height: 210px; overflow-y: auto; }
+.qa { display: flex; gap: 8px; font-size: var(--fs-sm); padding: 5px 8px; border-radius: var(--r-sm); background: rgba(255,255,255,0.022); }
+.qa .qa-a { margin-left: auto; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.qa .qa-a.yes { color: var(--good); } .qa .qa-a.no { color: var(--bad); } .qa .qa-a.sometimes { color: var(--warn); }
+.qa .qa-q { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.answer-pad { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.answer-pad button {
+  height: 48px; border-radius: var(--r-md); border: 1px solid var(--line);
+  background: var(--panel); font-family: var(--font-mono); letter-spacing: 0.08em;
+  text-transform: uppercase; font-size: var(--fs-sm);
+  transition: all var(--t-fast) var(--ease);
+}
+.answer-pad button:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--panel-2); }
+.answer-pad button[data-v="yes"]:hover { border-color: var(--good); color: var(--good); }
+.answer-pad button[data-v="no"]:hover { border-color: var(--bad); color: var(--bad); }
+
+/* ============================ COLD CASE ============================ */
+.case-file { font-size: var(--fs-sm); display: grid; gap: 6px; }
+.case-file .cf-row { display: flex; gap: 8px; }
+.case-file .cf-k { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); width: 62px; flex: none; padding-top: 3px; }
+.suspects { display: grid; gap: 7px; }
+.suspect {
+  display: flex; align-items: center; gap: 10px; padding: 9px 11px; text-align: left; width: 100%;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(255,255,255,0.02);
+  transition: all var(--t-fast) var(--ease);
+}
+.suspect:hover { border-color: var(--line-strong); background: var(--panel-2); transform: translateX(2px); }
+.suspect.on { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 14%, transparent); }
+.suspect .s-av { font-size: 20px; }
+.suspect .s-name { font-size: var(--fs-sm); font-weight: 550; }
+.suspect .s-role { font-size: var(--fs-xs); color: var(--ink-3); }
+.suspect .s-asked { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
+.suspect.accuse-pick { border-color: var(--bad); background: color-mix(in oklab, var(--bad) 14%, transparent); }
+.suspect.witness-pick { border-color: var(--gold); background: color-mix(in oklab, var(--gold) 14%, transparent); }
+
+/* ============================ SLEEPER ============================ */
+.table-players { display: grid; gap: 7px; }
+.tp {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(255,255,255,0.02);
+  font-size: var(--fs-sm); transition: all var(--t-fast) var(--ease);
+}
+.tp .tp-av { font-size: 17px; }
+.tp .tp-clues { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.tp-clue {
+  font-family: var(--font-mono); font-size: 10px; padding: 2px 7px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--ink-2); background: rgba(255,255,255,0.03);
+}
+.tp.you { border-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+.tp.voted { border-color: var(--bad); }
+.phase-steps { display: flex; gap: 4px; }
+.phase-step {
+  flex: 1; text-align: center; padding: 5px 4px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4);
+}
+.phase-step.on { border-color: var(--accent); color: var(--ink); background: color-mix(in oklab, var(--accent) 16%, transparent); }
+.phase-step.done { border-color: color-mix(in oklab, var(--good) 40%, transparent); color: color-mix(in oklab, var(--good) 80%, white); }
+.secret-box {
+  text-align: center; padding: 14px; border-radius: var(--r-md);
+  border: 1px dashed var(--line-strong); background: rgba(0,0,0,0.3);
+}
+.secret-box .sk { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-4); }
+.secret-box .sv { font-size: var(--fs-xl); font-weight: 700; margin-top: 4px; }
+.secret-box.sleeper { border-color: color-mix(in oklab, var(--bad) 50%, transparent); background: color-mix(in oklab, var(--bad) 10%, transparent); }
+.secret-box.sleeper .sv { color: color-mix(in oklab, var(--bad) 88%, white); font-size: var(--fs-lg); }
+
+/* ============================ CROSSFIRE ============================ */
+.motion {
+  padding: 14px; border-radius: var(--r-md); border-left: 3px solid var(--accent);
+  background: rgba(255,255,255,0.028); font-size: var(--fs-md); line-height: 1.45;
+}
+.motion .side {
+  display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.16em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px;
+  border: 1px solid var(--accent); color: var(--accent);
+}
+.judges { display: grid; gap: 10px; }
+.judge-row { display: flex; align-items: center; gap: 10px; }
+.judge-av {
+  width: 32px; height: 32px; flex: none; border-radius: 10px; display: grid; place-items: center;
+  font-size: 16px; border: 1px solid var(--line); background: var(--panel-2);
+}
+.judge-info { flex: 1; min-width: 0; }
+.judge-name { font-size: var(--fs-sm); }
+.judge-value { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-4); }
+.judge-total { font-family: var(--font-mono); font-size: var(--fs-lg); font-variant-numeric: tabular-nums; }
+.judge-blocks { display: flex; gap: 3px; margin-top: 4px; }
+.jb { width: 100%; height: 5px; border-radius: 2px; background: rgba(255,255,255,0.08); }
+.jb.s9 { background: var(--good); } .jb.s6 { background: var(--warn); }
+.jb.s4 { background: color-mix(in oklab, var(--bad) 70%, var(--warn)); } .jb.s0 { background: var(--bad); }
+.score-pop {
+  position: fixed; z-index: 65; font-family: var(--font-mono); font-weight: 700; font-size: 2rem;
+  pointer-events: none; animation: score-pop 1s var(--ease) forwards;
+}
+@keyframes score-pop { to { opacity: 0; transform: translateY(-46px) scale(1.25); } }
+
+/* ============================ GAUNTLET ============================ */
+.lives { display: flex; gap: 5px; font-size: 18px; }
+.lives .lost { filter: grayscale(1) opacity(0.28); }
+.ladder { display: flex; flex-direction: column; gap: 5px; max-height: 240px; overflow-y: auto; }
+.rung {
+  display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: var(--r-sm);
+  border: 1px solid var(--line); font-size: var(--fs-sm); background: rgba(255,255,255,0.02);
+}
+.rung .rn { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-4); width: 18px; }
+.rung .rl { font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+.rung .rp { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.rung.cleared { border-color: color-mix(in oklab, var(--good) 40%, transparent); background: color-mix(in oklab, var(--good) 9%, transparent); }
+.rung.failed { border-color: color-mix(in oklab, var(--bad) 40%, transparent); background: color-mix(in oklab, var(--bad) 9%, transparent); }
+.rung.now { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 15%, transparent); }
+.mult {
+  font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 700; text-align: center;
+  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.now-playing {
+  display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: var(--r-md);
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.now-playing .np-icon { font-size: 20px; }
+.now-playing .np-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
+.now-playing .np-game { font-size: var(--fs-sm); font-weight: 600; }

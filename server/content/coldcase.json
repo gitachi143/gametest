@@ -1,0 +1,191 @@
+{
+  "settings": [
+    {
+      "place": "the Kestrel Hotel",
+      "flavour": "a nine-storey art-deco hotel with a broken lift and a bar that never closes"
+    },
+    {
+      "place": "Thornfield House",
+      "flavour": "a country estate with damp walls, forty rooms, and one working telephone"
+    },
+    {
+      "place": "the Meridian Observatory",
+      "flavour": "a remote hilltop observatory, snowed in for the weekend"
+    },
+    {
+      "place": "the Alberni Ferry",
+      "flavour": "an overnight ferry six hours from either shore"
+    },
+    {
+      "place": "Halcyon Studios",
+      "flavour": "a film studio the week before a doomed premiere"
+    },
+    {
+      "place": "the Blackwater Distillery",
+      "flavour": "a family distillery on the night of its centenary party"
+    },
+    {
+      "place": "Ward 7, St Ivel's",
+      "flavour": "a hospital wing being decommissioned, half its lights already off"
+    },
+    {
+      "place": "the Pelican Yacht Club",
+      "flavour": "a members-only club with a regatta trophy nobody deserves"
+    }
+  ],
+  "victims": [
+    {
+      "name": "Adrian Vell",
+      "role": "the owner"
+    },
+    {
+      "name": "Margot Hale",
+      "role": "the managing director"
+    },
+    {
+      "name": "Dr Casper Onyx",
+      "role": "the head of research"
+    },
+    {
+      "name": "Lorna Pike",
+      "role": "the head accountant"
+    },
+    {
+      "name": "Emil Rask",
+      "role": "the star of the show"
+    },
+    {
+      "name": "Beatrice Fen",
+      "role": "the family matriarch"
+    },
+    {
+      "name": "Colin Draye",
+      "role": "the union representative"
+    },
+    {
+      "name": "Sunil Ahmar",
+      "role": "the night manager"
+    }
+  ],
+  "suspect_names": [
+    "Vera Lund",
+    "Otto Kray",
+    "Nadia Sol",
+    "Hugo Bex",
+    "Priya Raman",
+    "Silas Groat",
+    "Tamsin Ord",
+    "Emeka Ilo",
+    "Rosalind Vaux",
+    "Kit Marlow",
+    "Fenella Dree",
+    "Bruno Sacks",
+    "Ivy Chan",
+    "Dmitri Vane",
+    "Coretta Blaise",
+    "Wes Halloway"
+  ],
+  "professions": [
+    "the house physician",
+    "the sommelier",
+    "the chief engineer",
+    "the private secretary",
+    "the understudy",
+    "the family lawyer",
+    "the night porter",
+    "the archivist",
+    "the head chef",
+    "the security lead",
+    "the bookkeeper",
+    "the visiting journalist",
+    "the estranged sibling",
+    "the business partner"
+  ],
+  "relationships": [
+    "owed the victim a great deal of money",
+    "was about to be fired by the victim",
+    "was the victim's oldest friend, until last spring",
+    "had been quietly promoted over the victim",
+    "was named in the victim's will, to everyone's surprise",
+    "had a public argument with the victim two days ago",
+    "was being blackmailed by the victim",
+    "had just discovered the victim was lying to everyone",
+    "was in love with the victim, unrequited",
+    "was the only person the victim still trusted"
+  ],
+  "secrets": [
+    "you have been stealing small amounts from the accounts for two years",
+    "you were asleep on duty and cannot admit it",
+    "you were meeting a lover elsewhere in the building",
+    "you have been reading everyone's private correspondence",
+    "you are not qualified for the job you hold and forged the paperwork",
+    "you are the anonymous source who leaked the story to the press",
+    "you had already emptied the victim's safe, hours before the death",
+    "you gambled away money that was not yours",
+    "you have a criminal conviction under a different name",
+    "you destroyed a document that night, though not for the reason they think",
+    "you are being paid by a rival to report on everything here",
+    "you swapped the medication in the victim's cabinet, weeks ago and unrelated",
+    "you were drunk and remember almost nothing of that evening",
+    "you have been sabotaging the business quietly for months"
+  ],
+  "motives": [
+    "the victim was going to expose you tomorrow morning",
+    "the victim had decided to cut you out entirely",
+    "the victim caused the death of someone you loved and never paid for it",
+    "the victim was about to sell the one thing you built",
+    "the victim had proof of what you did in the old job",
+    "the victim laughed at you in front of everyone who matters",
+    "the victim was going to take the child away",
+    "the victim had promised you everything, then changed the will",
+    "the victim was blackmailing you into something unforgivable",
+    "you did it for someone else, and you would do it again"
+  ],
+  "styles": [
+    "Brittle and precise. Corrects the detective's grammar. Hates being interrupted.",
+    "Warm and chatty, hiding everything behind friendliness. Volunteers irrelevant detail.",
+    "Hostile from the first word. Answers in as few syllables as possible.",
+    "Nervous, over-explains, contradicts small details then corrects themselves.",
+    "Theatrical. Treats an interrogation as a performance and enjoys it.",
+    "Weary and honest-sounding, with one subject they absolutely will not discuss.",
+    "Bureaucratic. Answers as if filing a report. Cites procedure constantly.",
+    "Gently condescending. Implies the detective is out of their depth.",
+    "Grief-stricken and scattered, drifting into memories mid-answer.",
+    "Coolly amused. Finds the whole investigation faintly ridiculous."
+  ],
+  "rooms": [
+    "the boathouse",
+    "the east stairwell",
+    "the wine cellar",
+    "the roof terrace",
+    "the kitchens",
+    "the library",
+    "the generator room",
+    "the laundry",
+    "the loading bay",
+    "the smoking balcony",
+    "the chapel",
+    "the records office"
+  ],
+  "weapons": [
+    "a fall from the east stairwell",
+    "a single blow from a brass trophy",
+    "an overdose in a nightcap",
+    "a severed brake line on the service lift",
+    "carbon monoxide from a blocked flue",
+    "a letter opener from the desk set",
+    "drowning in the cold plunge pool",
+    "an allergic reaction, engineered",
+    "a fire that started in exactly one place"
+  ],
+  "times": [
+    "21:10",
+    "21:40",
+    "22:05",
+    "22:30",
+    "23:15",
+    "23:50",
+    "00:20",
+    "01:05"
+  ]
+}

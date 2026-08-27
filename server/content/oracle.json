@@ -1,0 +1,304 @@
+{
+  "secrets": [
+    {
+      "answer": "a lighthouse",
+      "category": "structure",
+      "tier": 2
+    },
+    {
+      "answer": "a wedding ring",
+      "category": "object",
+      "tier": 1
+    },
+    {
+      "answer": "a submarine",
+      "category": "vehicle",
+      "tier": 1
+    },
+    {
+      "answer": "a hedgehog",
+      "category": "animal",
+      "tier": 1
+    },
+    {
+      "answer": "a snow globe",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "the Eiffel Tower",
+      "category": "landmark",
+      "tier": 1
+    },
+    {
+      "answer": "a vending machine",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "an octopus",
+      "category": "animal",
+      "tier": 1
+    },
+    {
+      "answer": "a fire hydrant",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a parachute",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a hot air balloon",
+      "category": "vehicle",
+      "tier": 1
+    },
+    {
+      "answer": "a chess grandmaster",
+      "category": "person",
+      "tier": 3
+    },
+    {
+      "answer": "a lunar eclipse",
+      "category": "phenomenon",
+      "tier": 3
+    },
+    {
+      "answer": "a fortune cookie",
+      "category": "food",
+      "tier": 2
+    },
+    {
+      "answer": "a metronome",
+      "category": "object",
+      "tier": 3
+    },
+    {
+      "answer": "an escalator",
+      "category": "machine",
+      "tier": 2
+    },
+    {
+      "answer": "a beekeeper",
+      "category": "person",
+      "tier": 2
+    },
+    {
+      "answer": "a black hole",
+      "category": "phenomenon",
+      "tier": 2
+    },
+    {
+      "answer": "a revolving door",
+      "category": "object",
+      "tier": 3
+    },
+    {
+      "answer": "a jellyfish",
+      "category": "animal",
+      "tier": 1
+    },
+    {
+      "answer": "a public library",
+      "category": "place",
+      "tier": 2
+    },
+    {
+      "answer": "a pocket watch",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a sourdough starter",
+      "category": "food",
+      "tier": 3
+    },
+    {
+      "answer": "an air traffic controller",
+      "category": "person",
+      "tier": 3
+    },
+    {
+      "answer": "a slot machine",
+      "category": "machine",
+      "tier": 2
+    },
+    {
+      "answer": "the Great Barrier Reef",
+      "category": "place",
+      "tier": 2
+    },
+    {
+      "answer": "a lie detector",
+      "category": "machine",
+      "tier": 3
+    },
+    {
+      "answer": "a pinata",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a mosquito",
+      "category": "animal",
+      "tier": 1
+    },
+    {
+      "answer": "a crossword puzzle",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a lightning strike",
+      "category": "phenomenon",
+      "tier": 1
+    },
+    {
+      "answer": "a tattoo artist",
+      "category": "person",
+      "tier": 2
+    },
+    {
+      "answer": "a spiral staircase",
+      "category": "structure",
+      "tier": 3
+    },
+    {
+      "answer": "a rubber duck",
+      "category": "object",
+      "tier": 1
+    },
+    {
+      "answer": "a wine sommelier",
+      "category": "person",
+      "tier": 3
+    },
+    {
+      "answer": "a message in a bottle",
+      "category": "object",
+      "tier": 3
+    },
+    {
+      "answer": "a snowplough",
+      "category": "vehicle",
+      "tier": 2
+    },
+    {
+      "answer": "a coral polyp",
+      "category": "animal",
+      "tier": 3
+    },
+    {
+      "answer": "an hourglass",
+      "category": "object",
+      "tier": 1
+    },
+    {
+      "answer": "a whistleblower",
+      "category": "person",
+      "tier": 3
+    },
+    {
+      "answer": "the International Space Station",
+      "category": "structure",
+      "tier": 2
+    },
+    {
+      "answer": "a piggy bank",
+      "category": "object",
+      "tier": 1
+    },
+    {
+      "answer": "a solar panel",
+      "category": "machine",
+      "tier": 2
+    },
+    {
+      "answer": "a bagpipe",
+      "category": "instrument",
+      "tier": 2
+    },
+    {
+      "answer": "a theremin",
+      "category": "instrument",
+      "tier": 3
+    },
+    {
+      "answer": "a lightning bug",
+      "category": "animal",
+      "tier": 2
+    },
+    {
+      "answer": "a trampoline",
+      "category": "object",
+      "tier": 1
+    },
+    {
+      "answer": "a night shift nurse",
+      "category": "person",
+      "tier": 3
+    },
+    {
+      "answer": "a paper shredder",
+      "category": "machine",
+      "tier": 2
+    },
+    {
+      "answer": "an avalanche",
+      "category": "phenomenon",
+      "tier": 2
+    },
+    {
+      "answer": "a ferris wheel",
+      "category": "structure",
+      "tier": 1
+    },
+    {
+      "answer": "a wisdom tooth",
+      "category": "body",
+      "tier": 2
+    },
+    {
+      "answer": "a fingerprint",
+      "category": "body",
+      "tier": 2
+    },
+    {
+      "answer": "a yawn",
+      "category": "phenomenon",
+      "tier": 3
+    },
+    {
+      "answer": "a zipper",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a lullaby",
+      "category": "abstract",
+      "tier": 3
+    },
+    {
+      "answer": "a taxi driver",
+      "category": "person",
+      "tier": 1
+    },
+    {
+      "answer": "a compass needle",
+      "category": "object",
+      "tier": 2
+    },
+    {
+      "answer": "a greenhouse",
+      "category": "structure",
+      "tier": 2
+    },
+    {
+      "answer": "a hermit crab",
+      "category": "animal",
+      "tier": 2
+    }
+  ]
+}

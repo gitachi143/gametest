@@ -1,0 +1,105 @@
+"""Runtime configuration, read once from the environment.
+
+Every setting has a default that works out of the box: with no environment at
+all the app runs in DEMO MODE against the scripted mock provider.
+"""
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_dotenv(path: Path) -> None:
+    """Minimal .env loader (no dependency on python-dotenv)."""
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        # Real environment always wins over the file.
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_dotenv(ROOT / ".env")
+
+
+def _int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, "") or default)
+    except ValueError:
+        return default
+
+
+@dataclass
+class Settings:
+    provider: str = field(default_factory=lambda: (os.environ.get("LLM_PROVIDER") or "").strip().lower())
+    model: str = field(default_factory=lambda: (os.environ.get("LLM_MODEL") or "").strip())
+
+    gemini_api_key: str = field(default_factory=lambda: os.environ.get("GEMINI_API_KEY", "").strip())
+    google_project: str = field(default_factory=lambda: os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip())
+    vertex_location: str = field(default_factory=lambda: os.environ.get("VERTEX_LOCATION", "global").strip())
+    anthropic_api_key: str = field(default_factory=lambda: os.environ.get("ANTHROPIC_API_KEY", "").strip())
+    openai_api_key: str = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY", "").strip())
+    openai_base_url: str = field(
+        default_factory=lambda: (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
+    )
+
+    port: int = field(default_factory=lambda: _int("PORT", 8080))
+    app_secret: str = field(default_factory=lambda: os.environ.get("APP_SECRET", "dev-secret-change-me"))
+    db_path: str = field(default_factory=lambda: os.environ.get("DB_PATH", "data/arcade.db"))
+
+    daily_call_budget: int = field(default_factory=lambda: _int("DAILY_CALL_BUDGET", 600))
+    max_output_tokens: int = field(default_factory=lambda: _int("MAX_OUTPUT_TOKENS", 800))
+    llm_timeout: int = field(default_factory=lambda: _int("LLM_TIMEOUT", 45))
+
+    def __post_init__(self) -> None:
+        # Infer the provider when unset: whichever credential is present wins.
+        if not self.provider:
+            if self.gemini_api_key:
+                self.provider = "gemini"
+            elif self.google_project:
+                self.provider = "vertex"
+            elif self.anthropic_api_key:
+                self.provider = "anthropic"
+            elif self.openai_api_key:
+                self.provider = "openai"
+            else:
+                self.provider = "mock"
+
+        # A provider selected without its credential falls back to mock rather
+        # than serving 500s on every turn: DEMO MODE is a playable degradation.
+        if self.provider == "gemini" and not self.gemini_api_key:
+            self.provider = "mock"
+        elif self.provider == "vertex" and not self.google_project:
+            self.provider = "mock"
+        elif self.provider == "anthropic" and not self.anthropic_api_key:
+            self.provider = "mock"
+        elif self.provider == "openai" and not self.openai_api_key:
+            self.provider = "mock"
+
+        if not self.model:
+            self.model = {
+                "gemini": "gemini-2.5-flash",
+                "vertex": "gemini-2.5-flash",
+                "anthropic": "claude-opus-5",
+                "openai": "gpt-4o-mini",
+                "mock": "scripted-mock",
+            }.get(self.provider, "scripted-mock")
+
+    @property
+    def demo_mode(self) -> bool:
+        return self.provider == "mock"
+
+    def absolute_db_path(self) -> Path:
+        p = Path(self.db_path)
+        return p if p.is_absolute() else ROOT / p
+
+
+settings = Settings()
