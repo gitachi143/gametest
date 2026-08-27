@@ -33,6 +33,12 @@ def lock_for(sid: str) -> asyncio.Lock:
     return lock
 
 
+def release_lock(sid: str) -> None:
+    """Drop a finished session's lock so a long-lived process doesn't accumulate
+    one per session ever played. The caller still holds its own reference."""
+    _locks.pop(sid, None)
+
+
 def sse(ev: Ev) -> str:
     return f"event: {ev.event}\ndata: {json.dumps(ev.data, ensure_ascii=False)}\n\n"
 

@@ -193,3 +193,22 @@ def test_index_and_static_assets_are_served(client):
     for path in ("/static/css/app.css", "/static/css/tokens.css", "/static/css/games.css",
                  "/static/js/app.js", "/static/js/game.js", "/static/js/games/views.js"):
         assert client.get(path).status_code == 200, path
+
+
+def test_finished_sessions_do_not_leak_turn_locks(client, store):
+    """A long-lived process must not accumulate one lock per session played."""
+    from server import session as session_mod
+
+    h, _ = auth(client)
+    session_mod._locks.clear()
+    sid = client.post("/api/session", json={"game": "vault", "mode": "floor",
+                                            "opts": {"floor": 2, "limit": 1}}, headers=h).json()["session_id"]
+    client.post(f"/api/session/{sid}/act", json={"type": "say", "text": "hello"}, headers=h)
+    assert store.get_session(sid)["status"] == "done"
+    assert sid not in session_mod._locks
+
+    # An still-active session keeps its lock, so double-submits stay serialised.
+    live = client.post("/api/session", json={"game": "coldcase"}, headers=h).json()["session_id"]
+    client.post(f"/api/session/{live}/act",
+                json={"type": "say", "target": "s0", "text": "Where were you?"}, headers=h)
+    assert live in session_mod._locks

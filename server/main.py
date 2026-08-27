@@ -16,7 +16,7 @@ from .config import ROOT, settings
 from .engine.rng import daily_key, fresh_seed
 from .games import catalogue, get_game
 from .llm import close_llm, get_llm, usage
-from .session import daily_plan, lock_for, run_action
+from .session import daily_plan, lock_for, release_lock, run_action
 from .store import get_store
 
 logging.basicConfig(
@@ -244,11 +244,16 @@ async def act(
         async with lock:
             # Re-read inside the lock: the previous turn may have advanced state.
             live = store.get_session(sid) or session
-            async for frame in run_action(store, player, live, action):
-                if await request.is_disconnected():
-                    break
-                yield frame
-            yield "event: done\ndata: {}\n\n"
+            try:
+                async for frame in run_action(store, player, live, action):
+                    if await request.is_disconnected():
+                        break
+                    yield frame
+                yield "event: done\ndata: {}\n\n"
+            finally:
+                fresh = store.get_session(sid)
+                if fresh is None or fresh["status"] != "active":
+                    release_lock(sid)
 
     return StreamingResponse(
         stream(),
