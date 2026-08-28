@@ -1,5 +1,5 @@
 fastapi==0.141.1
-uvicorn[standard]==0.41.1
+uvicorn[standard]==0.41.0
 httpx==0.28.1
 
 # --- Optional provider extras -------------------------------------------------

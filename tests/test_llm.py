@@ -92,3 +92,64 @@ def test_json_helper_falls_back_to_default_on_garbage():
         assert out == {"fallback": True}
     finally:
         registry.set_llm(None)
+
+
+def _gemini_client(monkeypatch, responses):
+    """A GeminiClient whose HTTP layer replays `responses` (status, body) in order."""
+    from server.llm.gemini import GeminiClient
+
+    client = GeminiClient("gemini-2.5-flash", mode="gemini")
+    monkeypatch.setattr(client, "_backoff", lambda *_: asyncio.sleep(0))
+    calls = []
+
+    class _Resp:
+        def __init__(self, status, body):
+            self.status_code, self.text = status, body
+
+        def json(self):
+            return json.loads(self.text)
+
+    async def fake_post(url, headers=None, json=None):  # noqa: A002 - httpx kwarg name
+        calls.append(url)
+        return _Resp(*responses[len(calls) - 1])
+
+    monkeypatch.setattr(client._client, "post", fake_post)
+    return client, calls
+
+
+_OK_BODY = json.dumps({"candidates": [{"content": {"parts": [{"text": "hello"}]}}]})
+
+
+def test_gemini_retries_throttled_status_then_succeeds(monkeypatch):
+    client, calls = _gemini_client(
+        monkeypatch, [(429, "rate limited"), (503, "unavailable"), (200, _OK_BODY)]
+    )
+    out = asyncio.run(client.complete(LLMRequest(system="s", messages=[user("hi")], task="t")))
+    assert out == "hello"
+    assert len(calls) == 3, calls
+
+
+def test_gemini_gives_up_after_max_tries_on_persistent_throttle(monkeypatch):
+    from server.llm.base import LLMError
+
+    client, calls = _gemini_client(monkeypatch, [(429, "rate limited")] * 5)
+    try:
+        asyncio.run(client.complete(LLMRequest(system="s", messages=[user("hi")], task="t")))
+    except LLMError as exc:
+        assert "429" in str(exc), exc
+    else:
+        raise AssertionError("expected LLMError")
+    assert len(calls) == 3, calls
+
+
+def test_gemini_does_not_retry_client_error(monkeypatch):
+    from server.llm.base import LLMError
+
+    client, calls = _gemini_client(monkeypatch, [(403, "permission denied"), (200, _OK_BODY)])
+    try:
+        asyncio.run(client.complete(LLMRequest(system="s", messages=[user("hi")], task="t")))
+    except LLMError as exc:
+        assert "403" in str(exc), exc
+    else:
+        raise AssertionError("expected LLMError")
+    assert len(calls) == 1, calls

@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import random
 import time
 from typing import AsyncIterator
 
@@ -20,6 +21,12 @@ _AI_STUDIO = "https://generativelanguage.googleapis.com/v1beta"
 
 # Models where turning thinking off is both supported and a large latency win.
 _FLASH_HINTS = ("2.5-flash", "2.0-flash", "-flash-lite", "flash-latest")
+
+# Vertex's shared on-demand pool throttles under load and Google's frontends
+# return the odd 5xx. Both are transient, so a turn retries briefly rather than
+# surfacing an error or falling back to a scripted default mid-game.
+_RETRYABLE_STATUS = frozenset({429, 500, 503, 504})
+_MAX_TRIES = 3
 
 
 class GeminiClient:
@@ -161,12 +168,21 @@ class GeminiClient:
         if status == 400 and "thinking" in resp_text.lower() and self._thinking_supported:
             self._thinking_supported = False  # retry path handles the resend
             raise _RetryWithoutThinking()
-        detail = resp_text[:400]
-        raise LLMError(f"Gemini {self._mode} error {status}: {detail}")
+        message = f"Gemini {self._mode} error {status}: {resp_text[:400]}"
+        if status in _RETRYABLE_STATUS:
+            raise _Throttled(message)
+        raise LLMError(message)
+
+    @staticmethod
+    async def _backoff(tries: int) -> None:
+        """Exponential backoff, jittered so concurrent turns don't resend in step."""
+        await asyncio.sleep(0.6 * (2 ** (tries - 1)) + random.uniform(0, 0.3))
 
     # -- public API ---------------------------------------------------------
     async def complete(self, req: LLMRequest) -> str:
-        for attempt in range(2):
+        tries = 0
+        while tries < _MAX_TRIES:
+            tries += 1
             url, headers = await self._url("generateContent")
             try:
                 r = await self._client.post(url, headers=headers, json=self._payload(req))
@@ -174,12 +190,17 @@ class GeminiClient:
                     self._handle_error(r.text, r.status_code)
                 data = r.json()
             except _RetryWithoutThinking:
+                continue  # same budget; the payload no longer carries thinkingConfig
+            except _Throttled as exc:
+                if tries >= _MAX_TRIES:
+                    raise LLMError(str(exc)) from exc
+                await self._backoff(tries)
                 continue
             except httpx.HTTPError as exc:
-                if attempt == 0:
-                    await asyncio.sleep(0.6)
-                    continue
-                raise LLMError(f"Gemini request failed: {exc}") from exc
+                if tries >= _MAX_TRIES:
+                    raise LLMError(f"Gemini request failed: {exc}") from exc
+                await self._backoff(tries)
+                continue
             text = self._text_from(data)
             if not text:
                 blocked = (data.get("promptFeedback") or {}).get("blockReason")
@@ -189,7 +210,9 @@ class GeminiClient:
         return ""
 
     async def stream(self, req: LLMRequest) -> AsyncIterator[str]:
-        for attempt in range(2):
+        tries = 0
+        while tries < _MAX_TRIES:
+            tries += 1
             url, headers = await self._url("streamGenerateContent")
             got_any = False
             try:
@@ -216,10 +239,18 @@ class GeminiClient:
                 return
             except _RetryWithoutThinking:
                 continue
+            except _Throttled as exc:
+                # The status is read before the first yield, so nothing has
+                # reached the player yet and a resend cannot duplicate output.
+                if tries >= _MAX_TRIES:
+                    raise LLMError(str(exc)) from exc
+                await self._backoff(tries)
+                continue
             except httpx.HTTPError as exc:
-                if got_any or attempt == 1:
+                if got_any or tries >= _MAX_TRIES:
                     raise LLMError(f"Gemini stream failed: {exc}") from exc
-                await asyncio.sleep(0.6)
+                await self._backoff(tries)
+                continue
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -227,3 +258,7 @@ class GeminiClient:
 
 class _RetryWithoutThinking(Exception):
     pass
+
+
+class _Throttled(Exception):
+    """A retryable upstream status (rate limit or transient capacity error)."""
