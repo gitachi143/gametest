@@ -126,20 +126,21 @@ def test_gemini_retries_throttled_status_then_succeeds(monkeypatch):
     )
     out = asyncio.run(client.complete(LLMRequest(system="s", messages=[user("hi")], task="t")))
     assert out == "hello"
-    assert len(calls) == 3, calls
+    assert len(calls) == 3, calls  # two throttles absorbed, third attempt served
 
 
 def test_gemini_gives_up_after_max_tries_on_persistent_throttle(monkeypatch):
     from server.llm.base import LLMError
+    from server.llm.gemini import _MAX_TRIES
 
-    client, calls = _gemini_client(monkeypatch, [(429, "rate limited")] * 5)
+    client, calls = _gemini_client(monkeypatch, [(429, "rate limited")] * (_MAX_TRIES + 2))
     try:
         asyncio.run(client.complete(LLMRequest(system="s", messages=[user("hi")], task="t")))
     except LLMError as exc:
         assert "429" in str(exc), exc
     else:
         raise AssertionError("expected LLMError")
-    assert len(calls) == 3, calls
+    assert len(calls) == _MAX_TRIES, calls
 
 
 def test_gemini_does_not_retry_client_error(monkeypatch):

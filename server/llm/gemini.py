@@ -22,11 +22,14 @@ _AI_STUDIO = "https://generativelanguage.googleapis.com/v1beta"
 # Models where turning thinking off is both supported and a large latency win.
 _FLASH_HINTS = ("2.5-flash", "2.0-flash", "-flash-lite", "flash-latest")
 
-# Vertex's shared on-demand pool throttles under load and Google's frontends
-# return the odd 5xx. Both are transient, so a turn retries briefly rather than
-# surfacing an error or falling back to a scripted default mid-game.
+# Vertex serves gemini-*-flash from dynamic shared capacity rather than a fixed
+# per-minute quota, so a burst earns a 429 that clears again in about a second.
+# Measured on us-central1/global: 11 sequential calls then a 429, and every
+# probe from +1s onward succeeded. Retrying across ~8s therefore absorbs the
+# throttle, where giving up would strand a game turn with no opponent reply.
 _RETRYABLE_STATUS = frozenset({429, 500, 503, 504})
-_MAX_TRIES = 3
+_MAX_TRIES = 5
+_BACKOFF_CAP = 4.0
 
 
 class GeminiClient:
@@ -176,7 +179,8 @@ class GeminiClient:
     @staticmethod
     async def _backoff(tries: int) -> None:
         """Exponential backoff, jittered so concurrent turns don't resend in step."""
-        await asyncio.sleep(0.6 * (2 ** (tries - 1)) + random.uniform(0, 0.3))
+        delay = min(0.5 * (2 ** (tries - 1)), _BACKOFF_CAP)
+        await asyncio.sleep(delay + random.uniform(0, 0.4))
 
     # -- public API ---------------------------------------------------------
     async def complete(self, req: LLMRequest) -> str:
