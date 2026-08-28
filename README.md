@@ -98,22 +98,117 @@ all, and why adding an eighth game is a single module.
 
 ## Deploy to GCP
 
+### Prerequisites (one time)
+
 ```bash
-gcloud config set project YOUR_PROJECT
+# 1. gcloud CLI — https://cloud.google.com/sdk/docs/install
+gcloud --version
+
+# 2. log in and pick the project
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# 3. billing must be enabled on that project (Cloud Run's free tier still
+#    requires a billing account attached). Check:
+gcloud beta billing projects describe YOUR_PROJECT_ID
+```
+
+You also need `roles/owner` or, more narrowly, Cloud Run Admin + Service Account
+User + Secret Manager Admin + Service Usage Admin on the project. If a platform
+team owns IAM, run with `SKIP_IAM=1` and ask them for the two bindings the
+script would have made (listed below).
+
+### Deploy
+
+```bash
+git clone -b claude/chat-llm-games-g83nmo https://github.com/gitachi143/gametest.git
+cd gametest
 ./deploy/deploy-cloudrun.sh
 ```
 
-Deploys from source with Cloud Build, provisions an `APP_SECRET` in Secret
-Manager (so a redeploy doesn't log every player out), and defaults to
-`LLM_PROVIDER=vertex` — meaning **no API key anywhere**: the Cloud Run service
-account authenticates to Vertex AI directly. Grant it `roles/aiplatform.user`
-and you're done.
+That's the whole thing. First run takes 3–5 minutes (Cloud Build), later runs
+about 90 seconds. It is idempotent — everything it creates is reused.
 
-Override anything with env vars:
+What it does, in order:
+
+1. Enables `run`, `cloudbuild`, `artifactregistry`, `secretmanager` and
+   `aiplatform`.
+2. Resolves the runtime service account (the project's default compute SA unless
+   you set `SERVICE_ACCOUNT`).
+3. Generates `APP_SECRET` **once** into Secret Manager. Player records are keyed
+   to HMAC-signed tokens, so a fresh secret each deploy would log everyone out.
+4. Grants that service account exactly two roles:
+   `roles/secretmanager.secretAccessor` on the secret, and
+   `roles/aiplatform.user` on the project (Vertex only).
+5. Builds from source and deploys, public and unauthenticated.
+
+It prints the live URL and the health URL when it finishes.
+
+### Confirm the model is actually wired up
 
 ```bash
-REGION=europe-west1 LLM_MODEL=gemini-2.0-flash ./deploy/deploy-cloudrun.sh
-LLM_PROVIDER=gemini GEMINI_API_KEY=... ./deploy/deploy-cloudrun.sh
+curl -s https://YOUR-SERVICE-URL/api/health | python3 -m json.tool
+```
+
+```json
+{ "ok": true, "provider": "vertex", "model": "gemini-2.5-flash", "demo_mode": false }
+```
+
+**`"demo_mode": true` is the one thing to watch for.** It means the credential
+never arrived and the scripted opponent is standing in — the site still works,
+it just isn't talking to a model. The app degrades this way on purpose rather
+than 500ing on every turn.
+
+### Choosing a provider at deploy time
+
+The default is **Vertex AI with no API key anywhere** — the Cloud Run service
+account authenticates directly. To use something else:
+
+```bash
+# Google AI Studio key instead of Vertex
+LLM_PROVIDER=gemini GEMINI_API_KEY=AIza... ./deploy/deploy-cloudrun.sh
+
+# a different model or region
+LLM_MODEL=gemini-2.0-flash REGION=europe-west1 ./deploy/deploy-cloudrun.sh
+
+# Anthropic (also uncomment the anthropic line in the Dockerfile first)
+LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=sk-ant-... ./deploy/deploy-cloudrun.sh
+```
+
+Keys passed this way land in the service's environment. For anything long-lived,
+put them in Secret Manager and swap `--set-env-vars` for `--set-secrets` in the
+script — the `APP_SECRET` block shows the pattern.
+
+### If something goes wrong
+
+```bash
+gcloud run services logs read nexus-arcade --region us-central1 --limit 50
+```
+
+| Symptom | Cause |
+|---|---|
+| `"demo_mode": true` after a Vertex deploy | The `aiplatform.user` binding hasn't propagated (give it a minute) or you deployed with `SKIP_IAM=1`. |
+| `PERMISSION_DENIED` on `aiplatform` in the logs | Same binding, on the *runtime* service account — not your user account. |
+| Build fails on the first deploy | Artifact Registry API still enabling. Re-run the script. |
+| `403` from the URL in a browser | The service lost `--allow-unauthenticated`. Re-run the script. |
+| Turns hang, then error | Cloud Run request timeout is 300s; a model call taking longer than that means the model or region is wrong. |
+
+### Local first, if you'd rather
+
+```bash
+git clone -b claude/chat-llm-games-g83nmo https://github.com/gitachi143/gametest.git
+cd gametest
+./run.sh                     # demo mode, no key, http://127.0.0.1:8080
+```
+
+To run locally against real Vertex AI with your own credentials:
+
+```bash
+gcloud auth application-default login
+cp .env.example .env
+# set: LLM_PROVIDER=vertex, GOOGLE_CLOUD_PROJECT=your-project
+pip install "google-auth>=2.30"   # inside .venv
+./run.sh
 ```
 
 Or plain Docker anywhere:
