@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#08070a">
+<title>SWAY — every word is a weapon</title>
+<meta name="description" content="A persuasion roguelike. Talk your way past eight minds who each want something different, playing tactic cards that only pay out if your message actually does what it promised.">
+<meta property="og:title" content="SWAY — every word is a weapon">
+<meta property="og:description" content="A persuasion roguelike played entirely in conversation. Eight minds, one conversation each, and a deck of rhetoric that only pays out if you actually write the thing.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/cards.css">
+<link rel="stylesheet" href="/static/css/encounter.css">
+<link rel="stylesheet" href="/static/css/home.css">
+<link rel="stylesheet" href="/static/css/result.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<header class="topbar">
+  <button class="brand" id="brand" aria-label="SWAY home">
+    <span class="brand-mark" aria-hidden="true">◈</span>
+    <span class="brand-text">SWAY</span>
+  </button>
+  <div class="topbar-crumb" id="crumb" style="display:none"></div>
+  <span class="spacer"></span>
+
+  <button class="level-chip" id="lvl" aria-label="Open your profile">
+    <span class="level-ring" id="lvl-ring"><span id="lvl-num">1</span></span>
+    <span class="level-name" id="lvl-name">Mark</span>
+  </button>
+  <button class="chip" id="streak" title="Daily streak">⌗<span id="streak-num">0</span></button>
+  <button class="chip chip-icon" id="board" title="Leaderboards" aria-label="Leaderboards">♛</button>
+  <button class="chip chip-icon" id="sound" title="Sound" aria-pressed="true" aria-label="Toggle sound">♪</button>
+</header>
+
+<main id="view" aria-live="polite"></main>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="chain"></div>
+<div id="modal"></div>
+
+<script type="module" src="/static/js/app.js"></script>
+<noscript>
+  <p style="padding:2rem;color:#eee;font:16px system-ui">
+    SWAY is played in the browser and needs JavaScript.
+  </p>
+</noscript>
+</body>
+</html>

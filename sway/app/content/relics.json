@@ -1,0 +1,169 @@
+{
+  "_note": "Run-persistent modifiers. Every `effect` key here is read by engine/combat.py or engine/run.py - adding a key without wiring it makes the relic a lie.",
+  "relics": [
+    {
+      "id": "ivory-cufflinks",
+      "name": "Ivory Cufflinks",
+      "glyph": "⌗",
+      "rarity": "common",
+      "text": "+1 focus every turn.",
+      "flavor": "Nobody checks the papers of a man with good cuffs.",
+      "effect": {"focus": 1}
+    },
+    {
+      "id": "tin-ear",
+      "name": "Tin Ear",
+      "glyph": "⌁",
+      "rarity": "common",
+      "text": "Draw one extra card.",
+      "flavor": "Hears half of what is said. Chooses the better half.",
+      "effect": {"hand": 1}
+    },
+    {
+      "id": "worn-ledger",
+      "name": "Worn Ledger",
+      "glyph": "▤",
+      "rarity": "common",
+      "text": "+9 base for every card you play.",
+      "flavor": "Two hundred names. Not one of them paid twice.",
+      "effect": {"power_per_card": 9}
+    },
+    {
+      "id": "ghostwriters-pen",
+      "name": "Ghostwriter's Pen",
+      "glyph": "✒",
+      "rarity": "common",
+      "text": "Your opening line each floor hits for ×1.6.",
+      "flavor": "Somebody else's words. Your mouth.",
+      "effect": {"first_message_mult": 1.6}
+    },
+    {
+      "id": "brass-nerve",
+      "name": "Brass Nerve",
+      "glyph": "◍",
+      "rarity": "common",
+      "text": "Cards you fumble still count as half-executed.",
+      "flavor": "Confidence is not knowing. It is not showing.",
+      "effect": {"exec_floor": 1}
+    },
+    {
+      "id": "loaded-dice",
+      "name": "Loaded Dice",
+      "glyph": "⚂",
+      "rarity": "common",
+      "text": "Three rerolls on reward picks.",
+      "flavor": "Fair is a thing you say about other people's games.",
+      "effect": {"reroll": 3}
+    },
+
+    {
+      "id": "second-wind",
+      "name": "Second Wind",
+      "glyph": "❋",
+      "rarity": "uncommon",
+      "text": "Once per run, survive a floor you lost.",
+      "flavor": "You have been thrown out of better places than this.",
+      "effect": {"revive": 1}
+    },
+    {
+      "id": "silver-thread",
+      "name": "Silver Thread",
+      "glyph": "⌇",
+      "rarity": "uncommon",
+      "text": "Listening cards - Probe, Mirror, Callback - cost 0.",
+      "flavor": "Pull gently. It runs all the way back.",
+      "effect": {"cost_free_tag": "listen"}
+    },
+    {
+      "id": "the-mask",
+      "name": "The Mask",
+      "glyph": "☻",
+      "rarity": "uncommon",
+      "text": "Minds never see which tactics you played.",
+      "flavor": "They argue with a face. You are behind it.",
+      "effect": {"hide_tactics": true}
+    },
+    {
+      "id": "dossier",
+      "name": "The Dossier",
+      "glyph": "▦",
+      "rarity": "uncommon",
+      "text": "Every mind's traits are known from the first word.",
+      "flavor": "Six pages. Two photographs. One habit worth exploiting.",
+      "effect": {"reveal_all": true}
+    },
+    {
+      "id": "long-lunch",
+      "name": "Long Lunch",
+      "glyph": "◔",
+      "rarity": "uncommon",
+      "text": "+1 turn on every floor.",
+      "flavor": "The check has not come. It is not going to.",
+      "effect": {"turns": 1}
+    },
+    {
+      "id": "metronome",
+      "name": "Metronome",
+      "glyph": "⧗",
+      "rarity": "uncommon",
+      "text": "Start every floor with momentum already at 2.",
+      "flavor": "Rhythm beats brilliance over eight floors.",
+      "effect": {"momentum_start": 2}
+    },
+
+    {
+      "id": "glass-tongue",
+      "name": "Glass Tongue",
+      "glyph": "◈",
+      "rarity": "rare",
+      "text": "Masterful cards hit for an extra +0.6×. Fumbled cards cost you 20 ground.",
+      "flavor": "Sharp both ways. That is what makes it sharp.",
+      "effect": {"crit_bonus": 0.6, "fumble_penalty": 20}
+    },
+    {
+      "id": "understanding",
+      "name": "Deep Understanding",
+      "glyph": "◎",
+      "rarity": "rare",
+      "text": "Vulnerabilities you exploit hit for ×2.6 instead of ×2.",
+      "flavor": "Not what they want. What they need to be seen wanting.",
+      "effect": {"vuln_mult": 2.6}
+    },
+    {
+      "id": "three-card-monte",
+      "name": "Three-Card Monte",
+      "glyph": "⁙",
+      "rarity": "rare",
+      "text": "Playing three cards in one message adds ×1.5.",
+      "flavor": "Watch the queen. That is the whole instruction.",
+      "effect": {"trio_mult": 1.5}
+    },
+    {
+      "id": "patron",
+      "name": "The Patron",
+      "glyph": "♛",
+      "rarity": "rare",
+      "text": "Every floor cleared makes the next one worth 40% more.",
+      "flavor": "Somebody upstairs is enjoying this enormously.",
+      "effect": {"score_compound": 0.4}
+    },
+    {
+      "id": "hollow-crown",
+      "name": "Hollow Crown",
+      "glyph": "♜",
+      "rarity": "legendary",
+      "text": "×1.5 on everything. You get one fewer turn on every floor.",
+      "flavor": "Heavier than it looks. Everything is.",
+      "effect": {"base_mult": 1.5, "turns": -1}
+    },
+    {
+      "id": "the-original",
+      "name": "The Original",
+      "glyph": "✧",
+      "rarity": "legendary",
+      "text": "The first card you play each turn costs nothing and cannot fumble.",
+      "flavor": "You did this before it had a name.",
+      "effect": {"first_card_free": true}
+    }
+  ]
+}

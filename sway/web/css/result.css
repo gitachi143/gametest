@@ -1,0 +1,108 @@
+/* ============================================================================
+   Between-floor rewards, the floor-intro card, and the run result.
+   ========================================================================== */
+
+/* --- floor intro --------------------------------------------------------- */
+.intro { text-align: center; display: flex; flex-direction: column; align-items: center;
+         gap: 15px; padding: 8px 4px 4px; }
+.intro .floor-tag {
+  font-size: var(--fs-2xs); letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--text-4); font-weight: 700;
+}
+.intro h2 { font-size: var(--fs-3xl); line-height: 1; }
+.intro .who { font-size: var(--fs-sm); letter-spacing: 0.18em; text-transform: uppercase;
+              color: var(--mind); font-weight: 700; }
+.intro .scene { max-width: 44ch; color: var(--text-2); font-family: var(--font-display);
+                font-size: var(--fs-lg); line-height: 1.45; }
+.intro .obj {
+  padding: 11px 18px; border-radius: var(--r-md); border: 1px dashed var(--hair-2);
+  background: rgb(0 0 0 / 0.3); font-size: var(--fs-md); max-width: 46ch;
+}
+.intro .obj span { display: block; font-size: var(--fs-2xs); letter-spacing: 0.2em;
+                   text-transform: uppercase; color: var(--text-4); font-weight: 700;
+                   margin-bottom: 4px; }
+.intro .warn { font-size: var(--fs-xs); color: var(--violet); letter-spacing: 0.1em;
+               text-transform: uppercase; font-weight: 700; }
+
+/* --- reward -------------------------------------------------------------- */
+.reward-head { text-align: center; margin-bottom: 18px; }
+.reward-head .banner {
+  font-family: var(--font-display); font-size: var(--fs-2xl); color: var(--jade);
+}
+.reward-head .sub { font-size: var(--fs-xs); color: var(--text-3); letter-spacing: 0.14em;
+                    text-transform: uppercase; font-weight: 700; margin-top: 4px; }
+.reward-head .points { font-family: var(--font-mono); color: var(--gold); font-weight: 700; }
+
+.offers { display: flex; gap: 13px; justify-content: center; flex-wrap: wrap; }
+.offer { display: flex; flex-direction: column; gap: 9px; align-items: center; }
+.offer .card { --card-w: 168px; --card-h: 232px; }
+.offer .relic { width: 232px; min-height: 232px; flex-direction: column; align-items: flex-start; }
+.offer .relic .relic-glyph { width: 46px; height: 46px; font-size: 1.6rem; }
+.offer .btn { min-width: 120px; }
+.offer.new { animation: offerIn 520ms var(--ease-back) both; }
+.offer:nth-child(2).new { animation-delay: 90ms; }
+.offer:nth-child(3).new { animation-delay: 180ms; }
+@keyframes offerIn { from { opacity: 0; transform: translateY(26px) rotate(-3deg) scale(0.9); } }
+
+/* --- result -------------------------------------------------------------- */
+.result { text-align: center; }
+.result .verdict {
+  font-size: var(--fs-2xs); letter-spacing: 0.3em; text-transform: uppercase;
+  font-weight: 700; color: var(--text-4);
+}
+.result .verdict.win { color: var(--jade); }
+.result .verdict.loss { color: var(--crimson-2); }
+.result h2 { font-size: var(--fs-3xl); line-height: 1; margin: 7px 0 5px; }
+.result .detail { font-size: var(--fs-sm); color: var(--text-3); }
+
+.score-slab {
+  margin: 20px auto 18px; padding: 16px 22px; border-radius: var(--r-lg);
+  border: 1px solid rgb(232 180 74 / 0.3);
+  background: linear-gradient(168deg, rgb(232 180 74 / 0.12), transparent);
+  display: inline-flex; flex-direction: column; align-items: center; min-width: 210px;
+}
+.score-slab b {
+  font-family: var(--font-mono); font-size: clamp(2.4rem, 10vw, 3.4rem); font-weight: 700;
+  color: var(--gold-2); line-height: 1; text-shadow: 0 0 34px rgb(232 180 74 / 0.4);
+}
+.score-slab span { font-size: var(--fs-2xs); letter-spacing: 0.22em; text-transform: uppercase;
+                   color: var(--text-4); font-weight: 700; margin-top: 6px; }
+.score-slab .xp { color: var(--jade); font-family: var(--font-mono); font-size: var(--fs-sm);
+                  margin-top: 8px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+
+.share-grid {
+  font-size: clamp(1.2rem, 5vw, 1.7rem); letter-spacing: 0.12em; line-height: 1.35;
+  font-family: var(--font-mono);
+}
+.share-row { display: block; }
+
+.result-stats { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+                margin: 18px 0; }
+
+.floor-list { display: flex; flex-direction: column; gap: 3px; margin: 16px 0 4px;
+              text-align: left; }
+.floor-row {
+  display: flex; align-items: center; gap: 10px; padding: 7px 11px; border-radius: var(--r-sm);
+  background: rgb(0 0 0 / 0.24); font-size: var(--fs-sm);
+}
+.floor-row .n { font-family: var(--font-mono); color: var(--text-4); width: 20px; }
+.floor-row .s { font-family: var(--font-display); width: 20px; text-align: center; }
+.floor-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 white-space: nowrap; }
+.floor-row .p { font-family: var(--font-mono); font-weight: 700; color: var(--gold); }
+.floor-row.loss { background: rgb(224 83 63 / 0.1); }
+.floor-row.loss .p { color: var(--crimson-2); }
+
+.unlock-strip { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin: 6px 0; }
+.unlock-pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 99px;
+  border: 1px solid rgb(232 180 74 / 0.45); background: rgb(232 180 74 / 0.1);
+  font-size: var(--fs-xs); font-weight: 650; color: var(--gold-2);
+  animation: offerIn 460ms var(--ease-back) both;
+}
+.level-up {
+  margin: 12px auto; padding: 9px 18px; border-radius: 99px; display: inline-flex; gap: 9px;
+  border: 1px solid rgb(70 214 163 / 0.45); background: rgb(70 214 163 / 0.1);
+  color: var(--jade); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: var(--fs-xs);
+}

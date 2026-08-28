@@ -1,0 +1,182 @@
+/* ============================================================================
+   Tactic cards, relics, and the hand fan.
+   ========================================================================== */
+.card {
+  --edge: var(--r-common);
+  position: relative;
+  width: var(--card-w, 150px);
+  height: var(--card-h, 208px);
+  flex: none;
+  display: flex; flex-direction: column;
+  padding: 11px 11px 9px;
+  border: 1px solid color-mix(in oklab, var(--edge) 34%, transparent);
+  border-radius: var(--r-md);
+  background:
+    radial-gradient(115% 78% at 50% -12%, color-mix(in oklab, var(--edge) 22%, transparent), transparent 68%),
+    linear-gradient(172deg, var(--ink-3), var(--ink-1) 78%);
+  box-shadow: var(--sh-1);
+  text-align: left; color: var(--text);
+  transition: transform var(--t-md) var(--ease-back), box-shadow var(--t-md),
+              border-color var(--t-sm), filter var(--t-sm);
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+.card::before {                        /* rarity hairline along the top edge */
+  content: ""; position: absolute; inset: 0 12px auto; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--edge), transparent);
+  opacity: 0.7;
+}
+.card[data-rarity="starter"]   { --edge: var(--r-starter); }
+.card[data-rarity="common"]    { --edge: var(--r-common); }
+.card[data-rarity="uncommon"]  { --edge: var(--r-uncommon); }
+.card[data-rarity="rare"]      { --edge: var(--r-rare); }
+.card[data-rarity="legendary"] { --edge: var(--r-legendary); }
+
+.card[data-rarity="legendary"]::after {   /* holo shimmer */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 34%, rgb(172 123 240 / 0.2) 50%, transparent 66%);
+  background-size: 260% 100%;
+  animation: holo 4.5s linear infinite;
+}
+@keyframes holo { to { background-position: -260% 0; } }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.card-cost {
+  display: flex; gap: 2px; align-items: center; height: 16px;
+}
+.card-cost i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 6px rgb(232 180 74 / 0.65);
+}
+.card-cost.free { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--jade);
+                  letter-spacing: 0.1em; font-weight: 700; }
+.card-glyph {
+  font-family: var(--font-display); font-size: 1.5rem; line-height: 1;
+  color: var(--edge); opacity: 0.92;
+}
+.card-name {
+  font-family: var(--font-display); font-size: 1.02rem; line-height: 1.1;
+  margin-top: 7px; letter-spacing: 0.005em;
+}
+.card-rule {
+  margin-top: 7px; font-size: var(--fs-2xs); line-height: 1.4; color: var(--text-2);
+  flex: 1; overflow: hidden;
+}
+.card-stats {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+  padding-top: 7px; border-top: 1px solid var(--hair);
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700;
+}
+.card-stats .pow { color: var(--jade); }
+.card-stats .mul { color: var(--gold); }
+.card-stats .eff { color: var(--azure); font-size: var(--fs-2xs); font-weight: 600; }
+
+/* --- interactive states -------------------------------------------------- */
+.card.pick { cursor: pointer; }
+.card.pick:hover, .card.pick:focus-visible {
+  /* --t-hover is the live pointer tilt, --t-fan-hover the fan's resting angle. */
+  transform: var(--t-hover, var(--t-fan-hover, translateY(-15px) scale(1.07))); z-index: 6;
+  box-shadow: var(--sh-2), 0 0 0 1px color-mix(in oklab, var(--edge) 45%, transparent);
+  border-color: color-mix(in oklab, var(--edge) 60%, transparent);
+}
+.card.on {
+  transform: var(--t-on, translateY(-24px) scale(1.045)) !important; z-index: 8;
+  border-color: var(--gold);
+  box-shadow: var(--sh-2), 0 0 0 1px rgb(232 180 74 / 0.6),
+              0 12px 34px -10px rgb(232 180 74 / 0.5);
+}
+.card.on .card-name { color: var(--gold-2); }
+.card-order {
+  position: absolute; top: -9px; left: -9px; width: 22px; height: 22px;
+  border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(160deg, var(--gold-2), var(--gold-deep));
+  color: #21170a; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 800;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.6);
+  animation: orderIn var(--t-md) var(--ease-back) both;
+}
+@keyframes orderIn { from { transform: scale(0); } }
+
+.card.dud { filter: grayscale(0.6) brightness(0.6); }
+.card.dud .card-cost i { background: var(--crimson); box-shadow: none; }
+.card.locked { filter: grayscale(0.85) brightness(0.5); }
+.card-lock {
+  position: absolute; inset: auto 0 0; padding: 5px;
+  font-size: var(--fs-2xs); text-align: center; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-3); font-weight: 700;
+  background: rgb(0 0 0 / 0.55); border-radius: 0 0 var(--r-md) var(--r-md);
+}
+
+.card.deal { animation: deal var(--t-lg) var(--ease-back) both; }
+@keyframes deal {
+  from { opacity: 0; transform: translateY(38px) rotate(-8deg) scale(0.88); }
+}
+.card.spend { animation: spend 420ms var(--ease-in) both; }
+@keyframes spend {
+  to { opacity: 0; transform: translateY(-90px) scale(0.8) rotate(6deg); }
+}
+
+/* --- the fan ------------------------------------------------------------- */
+.hand {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 6px; padding: 26px 10px 10px; min-height: 0;
+  perspective: 1100px;
+}
+.hand .card { transform: var(--t-rest); transform-origin: 50% 130%; }
+.hand.tight { gap: 2px; }
+
+@media (max-width: 760px) {
+  .hand {
+    justify-content: flex-start; overflow-x: auto; overflow-y: hidden;
+    padding: 18px 12px 10px; gap: 8px;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .hand::-webkit-scrollbar { display: none; }
+  .hand .card { --card-w: 128px; --card-h: 182px; transform: none !important;
+                scroll-snap-align: center; }
+  .hand .card.on { transform: translateY(-12px) !important; }
+}
+
+/* --- relics -------------------------------------------------------------- */
+.relic {
+  position: relative; display: flex; gap: 11px; align-items: flex-start;
+  padding: 11px 13px; border-radius: var(--r-md);
+  border: 1px solid color-mix(in oklab, var(--edge, var(--r-common)) 30%, transparent);
+  background: linear-gradient(168deg, var(--paper-2), var(--paper));
+  text-align: left;
+}
+.relic[data-rarity="common"]    { --edge: var(--r-common); }
+.relic[data-rarity="uncommon"]  { --edge: var(--r-uncommon); }
+.relic[data-rarity="rare"]      { --edge: var(--r-rare); }
+.relic[data-rarity="legendary"] { --edge: var(--r-legendary); }
+.relic-glyph {
+  width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 1.2rem; color: var(--edge);
+  background: color-mix(in oklab, var(--edge) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--edge) 26%, transparent);
+}
+.relic-body { min-width: 0; }
+.relic-body b { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 400;
+                display: block; line-height: 1.15; }
+.relic-body p { font-size: var(--fs-xs); color: var(--text-2); margin-top: 3px; }
+.relic-body i { display: block; font-size: var(--fs-2xs); color: var(--text-4); margin-top: 5px; }
+.relic.locked { filter: grayscale(0.85) brightness(0.55); }
+
+/* Compact relic pips shown in the encounter HUD. */
+.relic-pips { display: flex; gap: 5px; flex-wrap: wrap; }
+.relic-pip {
+  width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 0.9rem;
+  border: 1px solid var(--hair-2); background: var(--paper-2); color: var(--gold);
+  transition: transform var(--t-sm);
+}
+.relic-pip:hover { transform: translateY(-2px) scale(1.08); }
+
+/* --- collection grid ----------------------------------------------------- */
+.coll-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  justify-items: center;
+}
+.coll-grid .card { --card-w: 100%; }
+.relic-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); }

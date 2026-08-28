@@ -1,0 +1,13 @@
+{
+  "name": "SWAY — every word is a weapon",
+  "short_name": "SWAY",
+  "description": "A persuasion roguelike played entirely in conversation.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08070a",
+  "theme_color": "#08070a",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

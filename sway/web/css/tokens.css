@@ -1,0 +1,104 @@
+/* ============================================================================
+   SWAY - design tokens. Every colour, size, radius and duration resolves here.
+   The look is "ink and gold": warm near-black paper, antique gold for anything
+   the player owns, crimson for anything in the way, jade for anything working.
+   ========================================================================== */
+:root {
+  color-scheme: dark;
+
+  /* --- surfaces ---------------------------------------------------------- */
+  --ink-0:      #08070a;
+  --ink-1:      #0d0c11;
+  --ink-2:      #131218;
+  --ink-3:      #1b1922;
+  --ink-4:      #26232f;
+  --paper:      rgba(255, 252, 245, 0.035);
+  --paper-2:    rgba(255, 252, 245, 0.06);
+  --paper-3:    rgba(255, 252, 245, 0.095);
+  --hair:       rgba(255, 248, 232, 0.085);
+  --hair-2:     rgba(255, 248, 232, 0.16);
+  --hair-3:     rgba(255, 248, 232, 0.3);
+
+  /* --- type ------------------------------------------------------------- */
+  --text:       #f2eee6;
+  --text-2:     #b9b3a8;
+  --text-3:     #857f76;
+  --text-4:     #5d584f;
+
+  /* --- accents ---------------------------------------------------------- */
+  --gold:       #e8b44a;
+  --gold-2:     #f7dc9c;
+  --gold-deep:  #a97a1e;
+  --jade:       #46d6a3;
+  --jade-deep:  #1c7d5e;
+  --crimson:    #e0533f;
+  --crimson-2:  #ff7a63;
+  --violet:     #ac7bf0;
+  --azure:      #6fa8ff;
+
+  /* Per-encounter hue, driven by the mind. Overwritten at runtime. */
+  --mind-hue:   40;
+  --mind:       hsl(var(--mind-hue) 74% 62%);
+  --mind-dim:   hsl(var(--mind-hue) 48% 22%);
+  --mind-glow:  hsl(var(--mind-hue) 90% 66% / 0.4);
+
+  /* Rarity. Used by cards, relics and the collection. */
+  --r-starter:  #8e887d;
+  --r-common:   #cfc6b6;
+  --r-uncommon: #46d6a3;
+  --r-rare:     #e8b44a;
+  --r-legendary:#ac7bf0;
+
+  /* --- fonts ------------------------------------------------------------ */
+  --font-display: "Instrument Serif", "Iowan Old Style", "Palatino Linotype",
+                  Palatino, Georgia, serif;
+  --font-ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+             "Helvetica Neue", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fs-2xs: 0.625rem;
+  --fs-xs:  0.6875rem;
+  --fs-sm:  0.8125rem;
+  --fs-md:  0.9375rem;
+  --fs-lg:  1.0625rem;
+  --fs-xl:  1.3125rem;
+  --fs-2xl: 1.75rem;
+  --fs-3xl: clamp(2.1rem, 6vw, 3.6rem);
+  --fs-4xl: clamp(2.8rem, 11vw, 6rem);
+
+  /* --- geometry --------------------------------------------------------- */
+  --r-xs: 5px;
+  --r-sm: 9px;
+  --r-md: 13px;
+  --r-lg: 19px;
+  --r-xl: 28px;
+  --gap: 14px;
+  --pad: clamp(14px, 3vw, 28px);
+  --topbar-h: 54px;
+
+  /* --- motion ----------------------------------------------------------- */
+  --t-xs:  90ms;
+  --t-sm:  150ms;
+  --t-md:  260ms;
+  --t-lg:  460ms;
+  --ease:      cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-back: cubic-bezier(0.34, 1.46, 0.64, 1);
+  --ease-in:   cubic-bezier(0.55, 0.06, 0.68, 0.19);
+
+  /* --- elevation -------------------------------------------------------- */
+  --sh-1: 0 1px 2px rgb(0 0 0 / 0.5), 0 4px 16px -8px rgb(0 0 0 / 0.7);
+  --sh-2: 0 2px 6px rgb(0 0 0 / 0.5), 0 18px 44px -18px rgb(0 0 0 / 0.85);
+  --sh-3: 0 4px 12px rgb(0 0 0 / 0.55), 0 40px 90px -30px rgb(0 0 0 / 0.95);
+  --glow-gold: 0 0 0 1px rgb(232 180 74 / 0.34), 0 10px 40px -14px rgb(232 180 74 / 0.42);
+  --glow-mind: 0 0 0 1px var(--mind-glow), 0 12px 46px -16px var(--mind-glow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-xs: 1ms; --t-sm: 1ms; --t-md: 1ms; --t-lg: 1ms; }
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

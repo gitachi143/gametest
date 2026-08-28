@@ -1,0 +1,11 @@
+fastapi==0.141.1
+uvicorn[standard]==0.41.0
+httpx==0.28.1
+
+# Optional provider extras
+#   Vertex AI  (LLM_PROVIDER=vertex): Application Default Credentials are picked
+#   up via google-auth when installed; on Cloud Run / GCE the metadata server is
+#   used and no extra package is needed.
+#     pip install "google-auth>=2.30"
+#   Anthropic and OpenAI-compatible providers need no extra package - both are
+#   spoken over plain httpx.
