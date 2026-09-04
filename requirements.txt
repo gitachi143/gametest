@@ -3,6 +3,8 @@ uvicorn[standard]==0.41.0
 httpx==0.28.1
 
 # --- Optional provider extras -------------------------------------------------
+# Azure OpenAI (LLM_PROVIDER=azure) and any OpenAI-compatible endpoint need no
+# extra package - both are spoken over the httpx above.
 # Anthropic provider (LLM_PROVIDER=anthropic) uses the official SDK:
 #   pip install "anthropic>=0.40"
 # Vertex AI provider (LLM_PROVIDER=vertex) picks up Application Default

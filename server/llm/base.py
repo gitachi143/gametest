@@ -2,8 +2,9 @@
 
 Games never talk to a vendor SDK directly; they call `LLMClient.complete`,
 `.stream` or `.complete_json`. That keeps game logic testable against the
-scripted mock provider and lets the deployment target Gemini, Vertex AI,
-Anthropic or any OpenAI-compatible endpoint by changing two env vars.
+scripted mock provider and lets the deployment target Azure OpenAI, Gemini,
+Vertex AI, Anthropic or any OpenAI-compatible endpoint by changing two env
+vars.
 """
 from __future__ import annotations
 
@@ -49,7 +50,24 @@ class LLMRequest:
 
 
 class LLMError(RuntimeError):
-    """Raised for provider failures the caller may want to surface to the UI."""
+    """Raised for provider failures the caller may want to surface to the UI.
+
+    `status` carries the upstream HTTP status when there was one, so a caller
+    can tell a retryable throttle from a permanent rejection without parsing
+    the message. `retry_after` carries the upstream Retry-After hint, in
+    seconds, when the provider sent one.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int | None = None,
+        retry_after: float | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.retry_after = retry_after
 
 
 class LLMClient(Protocol):

@@ -51,6 +51,15 @@ class Settings:
         default_factory=lambda: (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
     )
 
+    # Azure OpenAI. The endpoint is what the portal shows on the resource
+    # ("https://<name>.openai.azure.com"); `azure_base_url` below turns it into
+    # the v1 API root, which is OpenAI-compatible and needs no api-version.
+    azure_endpoint: str = field(default_factory=lambda: os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip())
+    azure_api_key: str = field(default_factory=lambda: os.environ.get("AZURE_OPENAI_API_KEY", "").strip())
+    # On Azure the `model` field of a request names the *deployment*, not the
+    # model. They are usually named the same, so this falls back to LLM_MODEL.
+    azure_deployment: str = field(default_factory=lambda: os.environ.get("AZURE_OPENAI_DEPLOYMENT", "").strip())
+
     port: int = field(default_factory=lambda: _int("PORT", 8080))
     app_secret: str = field(default_factory=lambda: os.environ.get("APP_SECRET", "dev-secret-change-me"))
     db_path: str = field(default_factory=lambda: os.environ.get("DB_PATH", "data/arcade.db"))
@@ -62,7 +71,9 @@ class Settings:
     def __post_init__(self) -> None:
         # Infer the provider when unset: whichever credential is present wins.
         if not self.provider:
-            if self.gemini_api_key:
+            if self.azure_endpoint and self.azure_api_key:
+                self.provider = "azure"
+            elif self.gemini_api_key:
                 self.provider = "gemini"
             elif self.google_project:
                 self.provider = "vertex"
@@ -75,7 +86,9 @@ class Settings:
 
         # A provider selected without its credential falls back to mock rather
         # than serving 500s on every turn: DEMO MODE is a playable degradation.
-        if self.provider == "gemini" and not self.gemini_api_key:
+        if self.provider == "azure" and not (self.azure_endpoint and self.azure_api_key):
+            self.provider = "mock"
+        elif self.provider == "gemini" and not self.gemini_api_key:
             self.provider = "mock"
         elif self.provider == "vertex" and not self.google_project:
             self.provider = "mock"
@@ -86,6 +99,7 @@ class Settings:
 
         if not self.model:
             self.model = {
+                "azure": "gpt-4.1-mini",
                 "gemini": "gemini-2.5-flash",
                 "vertex": "gemini-2.5-flash",
                 "anthropic": "claude-opus-5",
@@ -96,6 +110,20 @@ class Settings:
     @property
     def demo_mode(self) -> bool:
         return self.provider == "mock"
+
+    @property
+    def azure_base_url(self) -> str:
+        """The Azure OpenAI v1 API root, however the endpoint was pasted in.
+
+        The portal shows the bare resource host, but the OpenAI-compatible
+        surface lives under /openai/v1 - so accept either and normalise.
+        """
+        root = self.azure_endpoint.rstrip("/")
+        if root.endswith("/openai/v1"):
+            return root
+        if root.endswith("/openai"):
+            return root + "/v1"
+        return root + "/openai/v1"
 
     def absolute_db_path(self) -> Path:
         p = Path(self.db_path)

@@ -6,8 +6,9 @@ lying about something. Bluff a table that is reading you. Win a debate in front
 of three judges who want incompatible things.
 
 One web app, one container, no frontend build step. It runs with **zero API
-keys** in a scripted demo mode, and points at Gemini, Vertex AI, Anthropic or
-any OpenAI-compatible endpoint by changing two environment variables.
+keys** in a scripted demo mode, and points at Azure OpenAI, Gemini, Vertex AI,
+Anthropic or any OpenAI-compatible endpoint by changing two environment
+variables.
 
 ![The arcade](docs/home.png)
 
@@ -39,8 +40,9 @@ swappable rather than guess. Pick whichever you actually have:
 
 | `LLM_PROVIDER` | `LLM_MODEL` (examples) | Auth | Notes |
 |---|---|---|---|
+| `azure` | `gpt-4.1-mini`, `gpt-4o-mini` | `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` | **The deployed default.** Azure OpenAI's v1 API — OpenAI-compatible, no `api-version` to track. |
 | `gemini` | `gemini-2.5-flash`, `gemini-2.0-flash` | `GEMINI_API_KEY` | Google AI Studio. Fastest path. |
-| `vertex` | `gemini-2.5-flash` | Application Default Credentials | **The GCP route.** No key to manage: `gcloud auth application-default login` locally, the service account on Cloud Run. |
+| `vertex` | `gemini-2.5-flash` | Application Default Credentials | The GCP route, kept as a fallback. No key to manage: `gcloud auth application-default login` locally, the service account on Cloud Run. |
 | `anthropic` | `claude-opus-5`, `claude-sonnet-5` | `ANTHROPIC_API_KEY` | Needs `pip install anthropic`. |
 | `openai` | `gpt-4o-mini`, or anything | `OPENAI_API_KEY` + `OPENAI_BASE_URL` | Also covers OpenRouter, vLLM, Ollama, LM Studio. |
 | `mock` | — | none | Demo mode. Deterministic, offline, free. |
@@ -96,62 +98,68 @@ all, and why adding an eighth game is a single module.
 
 ---
 
-## Deploy to GCP
+## Deploy to Azure
 
 ### Prerequisites (one time)
 
 ```bash
-# 1. gcloud CLI — https://cloud.google.com/sdk/docs/install
-gcloud --version
+# 1. Azure CLI — https://learn.microsoft.com/cli/azure/install-azure-cli
+az version
 
-# 2. log in and pick the project
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-
-# 3. billing must be enabled on that project (Cloud Run's free tier still
-#    requires a billing account attached). Check:
-gcloud beta billing projects describe YOUR_PROJECT_ID
+# 2. log in and pick the subscription
+az login
+az account set --subscription YOUR_SUBSCRIPTION_ID
 ```
 
-You also need `roles/owner` or, more narrowly, Cloud Run Admin + Service Account
-User + Secret Manager Admin + Service Usage Admin on the project. If a platform
-team owns IAM, run with `SKIP_IAM=1` and ask them for the two bindings the
-script would have made (listed below).
+You need Contributor + User Access Administrator on the subscription, or Owner.
+Nothing else: no local Docker, because the image is built inside Azure
+Container Registry.
 
 ### Deploy
 
 ```bash
-git clone -b claude/chat-llm-games-g83nmo https://github.com/gitachi143/gametest.git
+git clone -b claude/add-sway-persuasion-roguelike https://github.com/gitachi143/gametest.git
 cd gametest
-./deploy/deploy-cloudrun.sh
+./deploy/deploy-azure.sh
 ```
 
-That's the whole thing. First run takes 3–5 minutes (Cloud Build), later runs
-about 90 seconds. It is idempotent — everything it creates is reused.
+That's the whole thing. First run takes 8–12 minutes (most of it the Container
+Apps environment and the Azure OpenAI model deployment), later runs about two
+minutes. It is idempotent — everything it creates is reused.
 
 What it does, in order:
 
-1. Enables `run`, `cloudbuild`, `artifactregistry`, `secretmanager` and
-   `aiplatform`.
-2. Resolves the runtime service account (the project's default compute SA unless
-   you set `SERVICE_ACCOUNT`).
-3. Generates `APP_SECRET` **once** into Secret Manager. Player records are keyed
-   to HMAC-signed tokens, so a fresh secret each deploy would log everyone out.
-4. Grants that service account exactly two roles:
-   `roles/secretmanager.secretAccessor` on the secret, and
-   `roles/aiplatform.user` on the project (Vertex only).
-5. Builds from source and deploys, public and unauthenticated.
+1. Registers `Microsoft.App`, `Microsoft.ContainerRegistry`,
+   `Microsoft.OperationalInsights` and `Microsoft.CognitiveServices`. A fresh
+   subscription has these unregistered, and the failure that produces names an
+   API rather than the fix.
+2. Creates the resource group `llm-games-rg` in `eastus2`.
+3. Creates an **Azure OpenAI** resource and deploys `gpt-4.1-mini` into it,
+   asking the resource which model version it will actually serve rather than
+   pinning one — available versions differ by region and rotate. Set
+   `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` to point at a resource you
+   already have and this step is skipped entirely.
+4. Creates an Azure Container Registry and runs `az acr build` — the image is
+   built server-side, so no local Docker is needed.
+5. Creates the Container Apps environment `games-env`.
+6. Generates `APP_SECRET` **once** into the app's secrets. Player records are
+   keyed to HMAC-signed tokens, so a fresh secret each deploy would log
+   everyone out; on a redeploy the existing one is reused.
+7. Creates or updates the container app, public, scale-to-zero, one replica max.
+
+The Azure OpenAI key is stored as a Container Apps secret and injected as
+`secretref:`, so it is not visible in the revision's environment.
 
 It prints the live URL and the health URL when it finishes.
 
 ### Confirm the model is actually wired up
 
 ```bash
-curl -s https://YOUR-SERVICE-URL/api/health | python3 -m json.tool
+curl -s https://YOUR-APP-URL/api/health | python3 -m json.tool
 ```
 
 ```json
-{ "ok": true, "provider": "vertex", "model": "gemini-2.5-flash", "demo_mode": false }
+{ "ok": true, "provider": "azure", "model": "gpt-4.1-mini", "demo_mode": false }
 ```
 
 **`"demo_mode": true` is the one thing to watch for.** It means the credential
@@ -161,51 +169,107 @@ than 500ing on every turn.
 
 ### Choosing a provider at deploy time
 
-The default is **Vertex AI with no API key anywhere** — the Cloud Run service
-account authenticates directly. To use something else:
-
 ```bash
-# Google AI Studio key instead of Vertex
-LLM_PROVIDER=gemini GEMINI_API_KEY=AIza... ./deploy/deploy-cloudrun.sh
+# a different Azure OpenAI model (the deployment is created for you)
+LLM_MODEL=gpt-4o-mini ./deploy/deploy-azure.sh
 
-# a different model or region
-LLM_MODEL=gemini-2.0-flash REGION=europe-west1 ./deploy/deploy-cloudrun.sh
+# a different region, and more per-minute token quota
+LOCATION=swedencentral AOAI_CAPACITY=150 ./deploy/deploy-azure.sh
 
-# Anthropic (also uncomment the anthropic line in the Dockerfile first)
-LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=sk-ant-... ./deploy/deploy-cloudrun.sh
+# an Azure OpenAI resource you already have
+AZURE_OPENAI_ENDPOINT=https://mine.openai.azure.com \
+  AZURE_OPENAI_API_KEY=... AZURE_OPENAI_DEPLOYMENT=my-deployment \
+  ./deploy/deploy-azure.sh
+
+# Google AI Studio, Anthropic, or any OpenAI-compatible endpoint
+LLM_PROVIDER=gemini GEMINI_API_KEY=AIza... ./deploy/deploy-azure.sh
+LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=sk-ant-... ./deploy/deploy-azure.sh
 ```
 
-Keys passed this way land in the service's environment. For anything long-lived,
-put them in Secret Manager and swap `--set-env-vars` for `--set-secrets` in the
-script — the `APP_SECRET` block shows the pattern.
+Every provider's credential goes into a Container Apps secret, not a plain
+environment variable.
+
+### A note on the deployment name
+
+On Azure the `model` field of a request names the **deployment**, not the model.
+The script names the deployment after the model so the two coincide, but if
+yours differ set `AZURE_OPENAI_DEPLOYMENT` — `LLM_MODEL` stays the model id and
+is what `/api/health` reports.
 
 ### If something goes wrong
+
+```bash
+az containerapp logs show -n nexus-arcade -g llm-games-rg --tail 50
+```
+
+| Symptom | Cause |
+|---|---|
+| `"demo_mode": true` after an Azure deploy | `AZURE_OPENAI_ENDPOINT` or the key secret didn't land. Check `az containerapp show -n nexus-arcade -g llm-games-rg --query properties.template.containers[0].env`. |
+| `401 Access denied due to invalid subscription key` | The key belongs to a different resource than the endpoint. Re-run the script without `AZURE_OPENAI_*` set and let it resolve both. |
+| `404 The API deployment for this resource does not exist` | `AZURE_OPENAI_DEPLOYMENT` doesn't match a real deployment. List them: `az cognitiveservices account deployment list -n <resource> -g llm-games-rg -o table`. |
+| The script exits saying the model isn't offered | That region doesn't carry it. It prints what *is* available; pick one with `LLM_MODEL=` or try `LOCATION=swedencentral`. |
+| Bland or generic judge output under load | A throttled call fell back. `/api/health` → `llm.errors` is the only external signal; see the note on throttling below. |
+| Turns hang, then error | The per-call timeout is `LLM_TIMEOUT` (45s). A model call exceeding it means the deployment has too little TPM — raise `AOAI_CAPACITY`. |
+
+### Throttling
+
+Azure OpenAI meters a real per-minute token quota, and a 429 arrives with a
+`Retry-After`. The adapter honours it, capped at 8 seconds — a quota exhaustion
+can ask for 60, and a game turn stranded that long is worse than one that falls
+back to a scripted line. If you see throttling under real load, the fix is to
+raise the deployment's TPM (`AOAI_CAPACITY=150`), which is a genuine dial —
+unlike Vertex, where flash models come from shared capacity and no quota
+increase helps.
+
+---
+
+## Deploy to GCP (the previous home, kept as a fallback)
+
+The Cloud Run path still works and is unchanged; `vertex` remains a supported
+provider.
+
+```bash
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+./deploy/deploy-cloudrun.sh
+```
+
+It enables `run`, `cloudbuild`, `artifactregistry`, `secretmanager` and
+`aiplatform`; resolves a runtime service account; generates `APP_SECRET` once
+into Secret Manager; grants that account `roles/secretmanager.secretAccessor`
+on the secret and `roles/aiplatform.user` on the project; then builds from
+source and deploys public. `SKIP_IAM=1` if a platform team owns IAM.
+
+The default there is **Vertex AI with no API key anywhere** — the Cloud Run
+service account authenticates directly. Logs:
 
 ```bash
 gcloud run services logs read nexus-arcade --region us-central1 --limit 50
 ```
 
-| Symptom | Cause |
-|---|---|
-| `"demo_mode": true` after a Vertex deploy | The `aiplatform.user` binding hasn't propagated (give it a minute) or you deployed with `SKIP_IAM=1`. |
-| `PERMISSION_DENIED` on `aiplatform` in the logs | Same binding, on the *runtime* service account — not your user account. |
-| Build fails on the first deploy | Artifact Registry API still enabling. Re-run the script. |
-| `403` from the URL in a browser | The service lost `--allow-unauthenticated`. Re-run the script. |
-| Turns hang, then error | Cloud Run request timeout is 300s; a model call taking longer than that means the model or region is wrong. |
+---
 
-### Local first, if you'd rather
+## Local first, if you'd rather
 
 ```bash
-git clone -b claude/chat-llm-games-g83nmo https://github.com/gitachi143/gametest.git
+git clone -b claude/add-sway-persuasion-roguelike https://github.com/gitachi143/gametest.git
 cd gametest
 ./run.sh                     # demo mode, no key, http://127.0.0.1:8080
 ```
 
-To run locally against real Vertex AI with your own credentials:
+To run locally against the same Azure OpenAI resource the deploy uses:
+
+```bash
+cp .env.example .env
+# set: LLM_PROVIDER=azure, AZURE_OPENAI_ENDPOINT=..., AZURE_OPENAI_API_KEY=...
+./run.sh
+```
+
+Nothing to install for that — Azure OpenAI is spoken over the `httpx` already
+in `requirements.txt`. For the Vertex fallback instead:
 
 ```bash
 gcloud auth application-default login
-cp .env.example .env
 # set: LLM_PROVIDER=vertex, GOOGLE_CLOUD_PROJECT=your-project
 pip install "google-auth>=2.30"   # inside .venv
 ./run.sh
@@ -215,20 +279,29 @@ Or plain Docker anywhere:
 
 ```bash
 docker build -t nexus-arcade .
-docker run -p 8080:8080 -e LLM_PROVIDER=gemini -e GEMINI_API_KEY=... nexus-arcade
+docker run -p 8080:8080 \
+  -e AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com \
+  -e AZURE_OPENAI_API_KEY=... nexus-arcade
 ```
 
-### One caveat worth knowing before you share the link
+---
 
-State lives in **SQLite**, which on Cloud Run is instance-local and ephemeral.
-The deploy script therefore pins `--max-instances=1`, so all players share one
-leaderboard — fine for a demo or a few dozen concurrent players, and the app
-will still serve correctly above that, but scores and streaks reset when the
-instance recycles.
+## One caveat worth knowing before you share the link
+
+State lives in **SQLite**, which on Container Apps — as on Cloud Run — is
+replica-local and ephemeral. The deploy script therefore pins
+`--max-replicas 1`, so all players share one leaderboard — fine for a demo or a
+few dozen concurrent players, and the app will still serve correctly above
+that, but scores and streaks reset when the replica recycles or a new revision
+deploys.
 
 For durable, horizontally-scaled state, `server/store.py` is the only file that
-touches persistence: reimplement that class against Firestore or Cloud SQL and
-raise `--max-instances`. Nothing else in the codebase knows what a database is.
+touches persistence: reimplement that class against Azure SQL or Cosmos DB and
+raise `--max-replicas`. Nothing else in the codebase knows what a database is.
+
+The cheaper half-measure, if you only want the leaderboard to survive a
+redeploy: mount an Azure Files share at `/data` and set `DB_PATH=/data/arcade.db`.
+That keeps one replica but makes the file outlive the revision.
 
 ---
 
@@ -243,6 +316,7 @@ server/
   config.py        env → Settings, with a mock fallback so it always boots
   llm/             provider-neutral client
     base.py        Msg / LLMRequest / robust JSON recovery
+    azure_openai.py  Azure OpenAI v1 API: Retry-After, adaptive param pruning
     gemini.py      AI Studio + Vertex AI (ADC → metadata server → gcloud)
     anthropic_client.py, openai_compat.py, mock.py
   engine/          types (SSE events, GameMeta, Result), seeded RNG, scoring
@@ -251,7 +325,7 @@ server/
 web/               zero-build frontend: ES modules, hand-written CSS
   css/tokens.css   every colour, radius and duration
   js/games/views.js  per-game HUD + composer, as pure functions of public state
-tests/             97 tests, all runnable offline against the mock provider
+tests/             132 tests, all runnable offline against the mock provider
 ```
 
 **The turn protocol.** A game's `act()` is an async generator of typed events.
@@ -287,14 +361,17 @@ the daily rotation and gauntlet eligibility for free.
 ## Testing
 
 ```bash
-.venv/bin/python -m pytest        # 97 tests, ~40s, no network, no API key
+.venv/bin/python -m pytest        # 132 tests, ~40s, no network, no API key
 ```
 
 Coverage worth knowing about: every game is played to a win *and* a loss; the
 "no secret in public state" contract is enforced per game; the vault's audit and
 gatekeeper layers are verified to actually intercept; session privacy between
 players, the daily one-attempt lock, and the per-player model-call budget are
-all tested at the HTTP layer.
+all tested at the HTTP layer. Every provider adapter is exercised against a
+mock HTTP transport too — including the Azure throttle, retry and
+parameter-pruning paths, which a real key would otherwise be the first thing to
+run.
 
 ## Cost control
 

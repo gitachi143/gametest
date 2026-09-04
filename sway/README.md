@@ -83,8 +83,9 @@ cp sway/.env.example sway/.env      # then fill in one block
 
 | `LLM_PROVIDER` | Credential | Notes |
 | --- | --- | --- |
+| `azure` | `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` | **What the deployed service uses.** Azure OpenAI's v1 API — OpenAI-compatible, no `api-version` to track |
 | `gemini` | `GEMINI_API_KEY` | Easiest — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| `vertex` | `GOOGLE_CLOUD_PROJECT` | No API key: uses ADC, the metadata server, or `gcloud` |
+| `vertex` | `GOOGLE_CLOUD_PROJECT` | The GCP fallback. No API key: uses ADC, the metadata server, or `gcloud` |
 | `anthropic` | `ANTHROPIC_API_KEY` | |
 | `openai` | `OPENAI_API_KEY` | Any OpenAI-compatible `OPENAI_BASE_URL` |
 
@@ -92,19 +93,59 @@ A provider named without its credential falls back to DEMO MODE rather than
 serving 500s on every turn. `/api/health` always tells you which one is live.
 
 ```bash
-cd sway && python -m pytest         # 161 tests, no credentials, no network
+cd sway && python -m pytest         # 178 tests, no credentials, no network
 ```
 
 ## Deploy
 
 ```bash
+az login
+./sway/deploy-azure.sh
+```
+
+Idempotent — run it again to redeploy. It registers the resource providers a
+fresh subscription leaves off, creates an Azure OpenAI resource and deploys
+`gpt-4.1-mini` into it, builds the image inside Azure Container Registry (so no
+local Docker is needed), generates `APP_SECRET` once into the app's secrets, and
+deploys to Azure Container Apps as its own app — scale-to-zero, one replica max.
+
+The build context is `sway/`, so the other app in this repo is never uploaded.
+The resource group, Container Apps environment, registry and Azure OpenAI
+resource are shared with Nexus Arcade — one environment costs less than two —
+but each app owns its own secrets, image repository and revisions, so
+redeploying one cannot disturb the other.
+
+Point it at a resource you already have, or change the model:
+
+```bash
+AZURE_OPENAI_ENDPOINT=https://mine.openai.azure.com AZURE_OPENAI_API_KEY=... \
+  ./sway/deploy-azure.sh
+LLM_MODEL=gpt-4o-mini LOCATION=swedencentral ./sway/deploy-azure.sh
+```
+
+`/api/health` reports which provider is live, and `llm.throttles` is the only
+external signal that a call was rate-limited and fell back.
+
+```bash
+az containerapp logs show -n sway -g llm-games-rg --tail 50
+```
+
+Azure OpenAI meters a real per-minute token quota and answers a 429 with a
+`Retry-After`. The adapter obeys it, capped at 8 seconds — an exhausted quota
+can ask for 60, and a turn stranded that long is worse than one that falls back
+to a deterministic verdict. If real load throttles you, raise the deployment's
+TPM with `AOAI_CAPACITY=150`; that is a genuine dial, unlike Vertex's shared
+capacity.
+
+### The GCP path, kept as a fallback
+
+```bash
 PROJECT_ID=your-project ./sway/deploy.sh
 ```
 
-Idempotent — run it again to redeploy. It enables the APIs, creates the
-`APP_SECRET` in Secret Manager once, grants the runtime service account
-`roles/aiplatform.user`, and deploys to Cloud Run as its own service. It shares
-nothing with anything else in this repo except the project.
+Unchanged: enables the APIs, creates `APP_SECRET` in Secret Manager once, grants
+the runtime service account `roles/aiplatform.user`, and deploys to Cloud Run as
+its own service.
 
 ## How it is put together
 
@@ -123,7 +164,7 @@ sway/
       meta.py          levels, the unlock ladder, badges
       rng.py           seeded everything, so the Daily is really the same puzzle
     ai/
-      client.py        four providers behind one interface, gated and retried
+      client.py        five providers behind one interface, gated and retried
       prompts.py       every prompt in the game, in one file
       judge.py         verdicts, normalised, with a deterministic fallback
       mock.py          the scripted opponent
@@ -132,7 +173,7 @@ sway/
       minds.json       15 minds, 3 holdout interrogators
       relics.json      18 relics
   web/                 ES modules and CSS, served as-is. No build step.
-  tests/               161 tests
+  tests/               178 tests
 ```
 
 ### Three decisions worth knowing
@@ -156,8 +197,12 @@ same paragraph keeps scoring.
 
 ### One caveat
 
-State is SQLite on local disk, and the service runs with `--max-instances=1` so
-that every player shares one file. On Cloud Run that disk is `/tmp`, so the
-leaderboard and streaks reset whenever the instance idles out or a new revision
-deploys. Point `app/store.py` at Firestore or Cloud SQL before raising the
-instance cap.
+State is SQLite on local disk, and the app runs with one replica max so that
+every player shares one file. That disk is `/tmp`, so on Container Apps — as on
+Cloud Run — the leaderboard and unlocked levels reset whenever the replica idles
+out or a new revision deploys. Point `app/store.py` at Azure SQL or Cosmos DB
+before raising the replica cap.
+
+The cheap half-measure, if you only want it to survive a redeploy: mount an
+Azure Files share at `/data` and set `DB_PATH=/data/sway.db`. One replica still,
+but the file outlives the revision.

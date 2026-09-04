@@ -13,7 +13,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Optional provider extras. Uncomment the one you deploy with:
+# Optional provider extras. Azure OpenAI needs none of these - it is spoken
+# over plain httpx. Uncomment the one you deploy with:
 #   Vertex AI (GCP service-account / metadata auth):
 # RUN pip install --no-cache-dir "google-auth>=2.30"
 #   Anthropic:
@@ -22,7 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY server/ ./server/
 COPY web/ ./web/
 
-# SQLite lives on a writable volume; on Cloud Run this is instance-local.
+# SQLite lives on a writable volume; on Container Apps and Cloud Run alike
+# this is instance-local and does not survive a new revision.
 RUN mkdir -p /data && \
     addgroup --system app && adduser --system --ingroup app app && \
     chown -R app:app /app /data
@@ -33,5 +35,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD python -c "import os,sys,urllib.request; p=os.environ.get('PORT','8080'); sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:'+p+'/api/health', timeout=4).status==200 else 1)"
 
-# Cloud Run injects $PORT; the shell form expands it.
+# Container Apps and Cloud Run both address the port they are told; the shell
+# form expands $PORT, which defaults to 8080 above.
 CMD exec uvicorn server.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --no-access-log

@@ -53,6 +53,10 @@ def build_client() -> LLMClient:
         from .anthropic_client import AnthropicClient
 
         return AnthropicClient(settings.model)
+    if provider == "azure":
+        from .azure_openai import AzureOpenAIClient
+
+        return AzureOpenAIClient(settings.model)
     if provider == "openai":
         from .openai_compat import OpenAICompatClient
 

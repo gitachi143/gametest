@@ -11,6 +11,17 @@ from ..config import settings
 from .base import LLMError, LLMRequest
 
 
+def retry_after_seconds(headers) -> float | None:
+    """Parse a `Retry-After` hint. Only the delta-seconds form is used here."""
+    raw = (headers.get("retry-after") or "").strip()
+    if not raw:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return None
+
+
 class OpenAICompatClient:
     name = "openai"
 
@@ -40,7 +51,11 @@ class OpenAICompatClient:
         try:
             r = await self._client.post("/chat/completions", json=self._payload(req, False))
             if r.status_code >= 400:
-                raise LLMError(f"OpenAI-compatible error {r.status_code}: {r.text[:300]}")
+                raise LLMError(
+                    f"OpenAI-compatible error {r.status_code}: {r.text[:300]}",
+                    status=r.status_code,
+                    retry_after=retry_after_seconds(r.headers),
+                )
             data = r.json()
         except httpx.HTTPError as exc:
             raise LLMError(f"OpenAI-compatible request failed: {exc}") from exc
@@ -54,7 +69,11 @@ class OpenAICompatClient:
             ) as r:
                 if r.status_code >= 400:
                     body = (await r.aread()).decode("utf-8", "replace")
-                    raise LLMError(f"OpenAI-compatible error {r.status_code}: {body[:300]}")
+                    raise LLMError(
+                        f"OpenAI-compatible error {r.status_code}: {body[:300]}",
+                        status=r.status_code,
+                        retry_after=retry_after_seconds(r.headers),
+                    )
                 async for line in r.aiter_lines():
                     if not line.startswith("data:"):
                         continue

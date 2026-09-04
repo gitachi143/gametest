@@ -56,12 +56,22 @@ class Settings:
         default_factory=lambda: (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
     )
 
+    # Azure OpenAI. Paste the endpoint the portal shows on the resource; the
+    # `azure_base_url` property below turns it into the v1 API root, which is
+    # OpenAI-compatible and needs no api-version.
+    azure_endpoint: str = field(default_factory=lambda: os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip())
+    azure_api_key: str = field(default_factory=lambda: os.environ.get("AZURE_OPENAI_API_KEY", "").strip())
+    # On Azure the `model` field names the *deployment*, not the model. They are
+    # usually named alike, so this falls back to LLM_MODEL.
+    azure_deployment: str = field(default_factory=lambda: os.environ.get("AZURE_OPENAI_DEPLOYMENT", "").strip())
+
     port: int = field(default_factory=lambda: _int("PORT", 8080))
     app_secret: str = field(default_factory=lambda: os.environ.get("APP_SECRET", "dev-secret-change-me"))
     db_path: str = field(default_factory=lambda: os.environ.get("DB_PATH", "data/sway.db"))
 
-    # A single Cloud Run instance shares one Vertex capacity pool: too many
-    # simultaneous calls earns a 429 for all of them, so turns queue instead.
+    # One instance, one upstream quota: too many simultaneous calls earns a 429
+    # for all of them, so turns queue instead. True of Azure OpenAI's per-minute
+    # token quota and of Vertex's shared capacity pool alike.
     llm_concurrency: int = field(default_factory=lambda: _int("LLM_CONCURRENCY", 3))
     llm_timeout: int = field(default_factory=lambda: _int("LLM_TIMEOUT", 45))
     max_output_tokens: int = field(default_factory=lambda: _int("MAX_OUTPUT_TOKENS", 700))
@@ -70,7 +80,9 @@ class Settings:
 
     def __post_init__(self) -> None:
         if not self.provider:
-            if self.gemini_api_key:
+            if self.azure_endpoint and self.azure_api_key:
+                self.provider = "azure"
+            elif self.gemini_api_key:
                 self.provider = "gemini"
             elif self.google_project:
                 self.provider = "vertex"
@@ -84,6 +96,7 @@ class Settings:
         # A provider named without its credential degrades to the scripted
         # opponent rather than serving 500s on every turn.
         missing = {
+            "azure": not (self.azure_endpoint and self.azure_api_key),
             "gemini": not self.gemini_api_key,
             "vertex": not self.google_project,
             "anthropic": not self.anthropic_api_key,
@@ -94,6 +107,7 @@ class Settings:
 
         if not self.model:
             self.model = {
+                "azure": "gpt-4.1-mini",
                 "gemini": "gemini-2.5-flash",
                 "vertex": "gemini-2.5-flash",
                 "anthropic": "claude-opus-5",
@@ -103,6 +117,20 @@ class Settings:
     @property
     def demo_mode(self) -> bool:
         return self.provider == "mock"
+
+    @property
+    def azure_base_url(self) -> str:
+        """The Azure OpenAI v1 API root, however the endpoint was pasted in.
+
+        The portal shows the bare resource host, but the OpenAI-compatible
+        surface lives under /openai/v1 - so accept either and normalise.
+        """
+        root = self.azure_endpoint.rstrip("/")
+        if root.endswith("/openai/v1"):
+            return root
+        if root.endswith("/openai"):
+            return root + "/v1"
+        return root + "/openai/v1"
 
     def absolute_db_path(self) -> Path:
         p = Path(self.db_path)

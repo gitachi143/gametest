@@ -1,17 +1,18 @@
 """Provider-neutral model access.
 
 Games never touch a vendor SDK. Everything goes through `LLM.text`, `.stream`
-or `.json`, so the same code plays against Vertex AI, Google AI Studio,
-Anthropic, any OpenAI-compatible endpoint, or the scripted opponent.
+or `.json`, so the same code plays against Azure OpenAI, Google AI Studio,
+Vertex AI, Anthropic, any OpenAI-compatible endpoint, or the scripted opponent.
 
 Two behaviours here are load-bearing rather than decorative:
 
-* **A global concurrency gate.** Vertex serves `gemini-*-flash` from dynamic
-  shared capacity, not a per-minute quota, so a burst of simultaneous calls
-  earns a 429 that no quota increase can fix. Queueing four at a time turns a
-  thundering herd into a short wait.
-* **Retry on 429/5xx.** The throttle clears in about a second, so five tries
-  across ~8s absorbs it. Giving up would strand a turn with no opponent.
+* **A global concurrency gate.** Every backend meters something: Azure OpenAI
+  a per-minute token quota, Vertex a pool of dynamic shared capacity. Either
+  way a burst of simultaneous calls earns a 429 for all of them, so queueing
+  three at a time turns a thundering herd into a short wait.
+* **Retry on 429/5xx.** The throttle usually clears in about a second, so five
+  tries across ~8s absorbs it, and Azure's `Retry-After` is obeyed within that
+  budget. Giving up would strand a turn with no opponent.
 """
 from __future__ import annotations
 
@@ -155,15 +156,38 @@ class _DropThinking(Exception):
 _RETRYABLE = frozenset({429, 500, 502, 503, 504})
 _MAX_TRIES = 5
 _BACKOFF_CAP = 3.0
+# Azure OpenAI answers a 429 with a Retry-After, and unlike Vertex's shared
+# capacity it means it - but a token-quota exhaustion can ask for 60s, and a
+# turn stranded that long is worse than one that falls back. So the hint is
+# honoured only up to here.
+_RETRY_AFTER_CAP = 8.0
 
 
 def tries_for(req: "Req") -> int:
     return max(1, req.retries or _MAX_TRIES)
 
 
-async def _backoff(tries: int) -> None:
-    delay = min(0.5 * (2 ** (tries - 1)), _BACKOFF_CAP)
-    await asyncio.sleep(delay + random.uniform(0, 0.4))
+def retry_after_seconds(headers) -> float | None:
+    """Parse a `Retry-After` hint. Only the delta-seconds form is used here."""
+    raw = (headers.get("retry-after") or "").strip()
+    if not raw:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return None
+
+
+def delay_for(tries: int, retry_after: float | None = None) -> float:
+    """Seconds to wait before a resend, before jitter."""
+    if retry_after is not None:
+        return min(retry_after, _RETRY_AFTER_CAP)
+    return min(0.5 * (2 ** (tries - 1)), _BACKOFF_CAP)
+
+
+async def _backoff(tries: int, retry_after: float | None = None) -> None:
+    # Jittered so concurrent turns don't all resend on the same tick.
+    await asyncio.sleep(delay_for(tries, retry_after) + random.uniform(0, 0.4))
 
 
 # -------------------------------------------------------------------- Gemini
@@ -494,6 +518,129 @@ class OpenAICompatClient:
         await self._client.aclose()
 
 
+# ------------------------------------------------------------- Azure OpenAI
+# Deployments whose *names* start like this are assumed to be reasoning models,
+# so the first call is already shaped right instead of costing a 400.
+_REASONING_HINTS = ("o1", "o3", "o4", "gpt-5")
+
+
+class AzureOpenAIClient(OpenAICompatClient):
+    """Azure OpenAI over its v1 API.
+
+    Azure's legacy route (`/openai/deployments/<name>/chat/completions?api-version=`)
+    is not OpenAI-compatible; the v1 one is, so only three things differ from
+    the plain OpenAI adapter: an `api-key` header, a `Retry-After` worth
+    obeying, and reasoning deployments that renamed `max_tokens` and reject a
+    non-default `temperature`. Deployment names are arbitrary, so the model id
+    is only a hint - the 400 is what actually teaches us, once per process.
+    """
+
+    def __init__(self, model: str) -> None:
+        # Deliberately not calling super().__init__: it would point at
+        # OPENAI_BASE_URL with bearer auth. And the wire name is the
+        # *deployment*, which need not match the model id we report.
+        self.model, self.name = settings.azure_deployment or model, "azure"
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(settings.llm_timeout),
+            base_url=settings.azure_base_url,
+            headers={"api-key": settings.azure_api_key},
+        )
+        self._reasoning = self.model.lower().startswith(_REASONING_HINTS)
+        self._send_temperature = not self._reasoning
+
+    def _body(self, req: Req, stream: bool = False) -> dict:
+        body = super()._body(req, stream)
+        if self._reasoning:
+            body["max_completion_tokens"] = body.pop("max_tokens")
+        if not self._send_temperature:
+            body.pop("temperature", None)
+        return body
+
+    def _learn_from(self, status: int, text: str) -> bool:
+        """Adapt to a 400 about an unsupported parameter. True if worth a resend."""
+        if status != 400:
+            return False
+        body, adapted = text.lower(), False
+        # Checked most-specific first: "max_completion_tokens" does not contain
+        # "max_tokens" as a substring, but reading it that way is one typo away.
+        if "max_completion_tokens" in body and self._reasoning:
+            self._reasoning = False     # the name misled us; it wants the classic field
+            adapted = True
+        elif "max_tokens" in body and not self._reasoning:
+            self._reasoning = True
+            self._send_temperature = False
+            adapted = True
+        if "temperature" in body and self._send_temperature:
+            self._send_temperature = False
+            adapted = True
+        return adapted
+
+    async def complete(self, req: Req) -> str:
+        budget = tries_for(req)
+        for tries in range(1, budget + 1):
+            wait = None
+            try:
+                r = await self._client.post("/chat/completions", json=self._body(req))
+                if r.status_code in _RETRYABLE:
+                    usage.throttles += 1
+                    wait = retry_after_seconds(r.headers) if r.status_code == 429 else None
+                    raise _Throttled(f"azure {r.status_code}")
+                if r.status_code >= 400:
+                    if self._learn_from(r.status_code, r.text):
+                        continue        # reshaped body, same try budget
+                    raise LLMError(f"azure error {r.status_code}: {r.text[:300]}")
+            except (_Throttled, httpx.HTTPError) as exc:
+                if tries >= budget:
+                    raise LLMError(str(exc)) from exc
+                await _backoff(tries, wait)
+                continue
+            choices = r.json().get("choices") or [{}]
+            return ((choices[0].get("message") or {}).get("content") or "").strip()
+        return ""
+
+    async def stream(self, req: Req) -> AsyncIterator[str]:
+        """Resends only on a failure that arrives before the first token.
+
+        A retryable status is known from the response head, so a resend there
+        cannot duplicate output. Once the body is streaming, a truncation ends
+        the reply rather than restarting it - the UI has already shown tokens.
+        """
+        budget = tries_for(req)
+        for tries in range(1, budget + 1):
+            wait, again = None, False
+            async with self._client.stream(
+                "POST", "/chat/completions", json=self._body(req, True)
+            ) as r:
+                if r.status_code >= 400:
+                    text = (await r.aread()).decode("utf-8", "replace")
+                    if r.status_code in _RETRYABLE:
+                        usage.throttles += 1
+                        if tries >= budget:
+                            raise LLMError(f"azure {r.status_code}: {text[:300]}")
+                        wait = retry_after_seconds(r.headers) if r.status_code == 429 else None
+                        again = True
+                    elif self._learn_from(r.status_code, text):
+                        again = True
+                    else:
+                        raise LLMError(f"azure error {r.status_code}: {text[:300]}")
+                else:
+                    async for raw_line in r.aiter_lines():
+                        if not raw_line.startswith("data:"):
+                            continue
+                        raw = raw_line[5:].strip()
+                        if not raw or raw == "[DONE]":
+                            continue
+                        try:
+                            delta = (json.loads(raw)["choices"][0].get("delta") or {}).get("content")
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+                        if delta:
+                            yield delta
+            if not again:
+                return
+            await _backoff(tries, wait)
+
+
 # ------------------------------------------------------------------ registry
 _client = None
 _gate: asyncio.Semaphore | None = None
@@ -512,6 +659,8 @@ def build_client():
         return GeminiClient(settings.model, mode=p)
     if p == "anthropic":
         return AnthropicClient(settings.model)
+    if p == "azure":
+        return AzureOpenAIClient(settings.model)
     if p == "openai":
         return OpenAICompatClient(settings.model)
     from .mock import MockClient
