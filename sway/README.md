@@ -137,6 +137,25 @@ to a deterministic verdict. If real load throttles you, raise the deployment's
 TPM with `AOAI_CAPACITY=150`; that is a genuine dial, unlike Vertex's shared
 capacity.
 
+### On a restricted subscription
+
+Azure for Students and MSDN subscriptions disable ACR Tasks, cap the account at
+one Container Apps environment, pin deployments to a few regions, and may sit
+under a tenant policy that demands tags. The script handles the tags and the
+regions itself; the other two need flags:
+
+```bash
+gh workflow run build-images.yml --ref "$(git branch --show-current)"
+SHA=$(git rev-parse HEAD)
+ENVIRONMENT=<existing-env> ENVIRONMENT_GROUP=<its-group> \
+  IMAGE=ghcr.io/<owner>/sway:$SHA \
+  REGISTRY_USERNAME=<owner> REGISTRY_PASSWORD=$(gh auth token) \
+  ./sway/deploy-azure.sh
+```
+
+`.github/workflows/build-images.yml` at the repo root builds both apps' images.
+See the Nexus Arcade README for the full table of what each error means.
+
 ### The GCP path, kept as a fallback
 
 ```bash

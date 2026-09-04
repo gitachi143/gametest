@@ -211,6 +211,36 @@ az containerapp logs show -n nexus-arcade -g llm-games-rg --tail 50
 | Bland or generic judge output under load | A throttled call fell back. `/api/health` → `llm.errors` is the only external signal; see the note on throttling below. |
 | Turns hang, then error | The per-call timeout is `LLM_TIMEOUT` (45s). A model call exceeding it means the deployment has too little TPM — raise `AOAI_CAPACITY`. |
 
+### Restricted subscriptions (Azure for Students, MSDN)
+
+The deploy was built against one of these, so all four of its restrictions are
+handled — but they surface as unrelated-looking errors, so they are worth
+naming:
+
+| What you hit | What it means | What to do |
+|---|---|---|
+| `RequestDisallowedByPolicy` on the resource group | A tenant policy requires tags. Northeastern's requires `Owner`, `Cost Center` and `IaC managed`. | Already handled — the script tags every resource. Override with `TAG_OWNER`, `TAG_COST_CENTER`, `TAG_IAC`. |
+| `RequestDisallowedByAzure` mentioning regions | The subscription is pinned to a handful of regions. | Already handled — a preflight reads the policy and names the legal regions before creating anything. |
+| `TasksOperationsNotAllowed` on the build | **ACR Tasks is disabled**, so no server-side build. | Build on GitHub instead — see below. |
+| `MaxNumberOfGlobalEnvironmentsInSubExceeded` | Only **one** Container Apps environment per subscription. | Reuse the existing one: `ENVIRONMENT=<name> ENVIRONMENT_GROUP=<group>`. The script lists what exists when it fails. |
+
+**Building without ACR Tasks.** `.github/workflows/build-images.yml` builds both
+images on GitHub and pushes them to GHCR. Then hand the image to the script:
+
+```bash
+gh workflow run build-images.yml --ref "$(git branch --show-current)"
+# once it finishes:
+SHA=$(git rev-parse HEAD)
+IMAGE=ghcr.io/<owner>/nexus-arcade:$SHA \
+  REGISTRY_USERNAME=<owner> REGISTRY_PASSWORD=$(gh auth token) \
+  ./deploy/deploy-azure.sh
+```
+
+The GHCR packages stay **private**, matching the repo, so Container Apps needs
+those pull credentials. The token needs `read:packages`
+(`gh auth refresh -s workflow -s read:packages`). A `gh` OAuth token works but
+rotates; for anything long-lived use a PAT scoped to `read:packages` only.
+
 ### Throttling
 
 Azure OpenAI meters a real per-minute token quota, and a 429 arrives with a

@@ -15,6 +15,10 @@
 #   LOCATION          Azure region              (default: westus)
 #   APP               container app name        (default: nexus-arcade)
 #   ENVIRONMENT       Container Apps env        (default: games-env)
+#   ENVIRONMENT_GROUP the environment's resource group, if it lives in another
+#                     one (default: RESOURCE_GROUP). Subscriptions that cap
+#                     environments at one - students' do - need this to reuse
+#                     whatever environment already exists.
 #   REGISTRY          ACR name, globally unique (default: derived, see below)
 #   IMAGE             a prebuilt image to deploy instead of building one. Set
 #                     this where ACR Tasks is unavailable (Azure for Students
@@ -238,14 +242,32 @@ if [ -n "${REG_USER}" ]; then
 fi
 
 # --- 5. Container Apps environment ----------------------------------------
-if ! az containerapp env show --name "${ENVIRONMENT}" \
-      --resource-group "${RESOURCE_GROUP}" >/dev/null 2>&1; then
-  echo "→ creating Container Apps environment ${ENVIRONMENT} (2-3 minutes)"
-  az containerapp env create --name "${ENVIRONMENT}" \
-    --resource-group "${RESOURCE_GROUP}" --location "${LOCATION}" \
-    "${TAGS[@]}" --only-show-errors >/dev/null
+# Referenced by resource id throughout, so the environment may live in another
+# resource group than the app. That matters because some subscriptions allow
+# only one environment per subscription, and the app should not have to move
+# into whichever group happens to own it.
+ENV_GROUP=${ENVIRONMENT_GROUP:-${RESOURCE_GROUP}}
+ENV_ID=$(az containerapp env show --name "${ENVIRONMENT}" \
+  --resource-group "${ENV_GROUP}" --query id -o tsv 2>/dev/null || true)
+
+if [ -n "${ENV_ID}" ]; then
+  echo "→ reusing Container Apps environment ${ENVIRONMENT} (group ${ENV_GROUP})"
 else
-  echo "→ reusing Container Apps environment ${ENVIRONMENT}"
+  echo "→ creating Container Apps environment ${ENVIRONMENT} (2-3 minutes)"
+  if ! az containerapp env create --name "${ENVIRONMENT}" \
+      --resource-group "${RESOURCE_GROUP}" --location "${LOCATION}" \
+      "${TAGS[@]}" --only-show-errors >/dev/null; then
+    echo >&2
+    echo "Could not create an environment. If that was" >&2
+    echo "MaxNumberOfGlobalEnvironmentsInSubExceeded, this subscription allows" >&2
+    echo "only one - reuse the existing one instead:" >&2
+    az resource list --resource-type Microsoft.App/managedEnvironments \
+      --query '[].{name:name, group:resourceGroup, location:location}' -o table >&2 || true
+    echo "  ENVIRONMENT=<name> ENVIRONMENT_GROUP=<group> $0" >&2
+    exit 1
+  fi
+  ENV_ID=$(az containerapp env show --name "${ENVIRONMENT}" \
+    --resource-group "${RESOURCE_GROUP}" --query id -o tsv)
 fi
 
 # --- 6. APP_SECRET --------------------------------------------------------
@@ -304,7 +326,7 @@ esac
 if [ "${APP_EXISTS}" = "0" ]; then
   echo "→ creating container app ${APP}"
   az containerapp create --name "${APP}" --resource-group "${RESOURCE_GROUP}" \
-    --environment "${ENVIRONMENT}" \
+    --environment "${ENV_ID}" \
     --image "${IMAGE}" \
     ${REG_ARGS[@]+"${REG_ARGS[@]}"} \
     --target-port 8080 --ingress external \
